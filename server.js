@@ -3,19 +3,93 @@ const http = require('http');
 const socketIo = require('socket.io');
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs');
 
 const app = express();
 const server = http.createServer(app);
+
+// 中间件
+app.use(cors());
+app.use(express.json());
+
+// 确保data目录存在
+const dataDir = path.join(__dirname, 'data');
+if (!fs.existsSync(dataDir)) {
+  fs.mkdirSync(dataDir);
+}
+
+// 确保wordlist.json文件存在
+const wordlistPath = path.join(dataDir, 'wordlist.json');
+if (!fs.existsSync(wordlistPath)) {
+  fs.writeFileSync(wordlistPath, JSON.stringify({ words: [] }));
+}
+
+// API路由：获取单词列表
+app.get('/api/words', (req, res) => {
+  try {
+    const data = JSON.parse(fs.readFileSync(wordlistPath, 'utf8'));
+    res.json(data.words);
+  } catch (error) {
+    res.status(500).json({ error: '读取单词列表失败' });
+  }
+});
+
+// API路由：添加新单词
+app.post('/api/words', (req, res) => {
+  try {
+    const { word } = req.body;
+    if (!word || typeof word !== 'string') {
+      return res.status(400).json({ error: '无效的单词' });
+    }
+
+    const data = JSON.parse(fs.readFileSync(wordlistPath, 'utf8'));
+    if (!data.words.includes(word.toLowerCase())) {
+      data.words.push(word.toLowerCase());
+      data.words.sort(); // 按字母顺序排序
+      fs.writeFileSync(wordlistPath, JSON.stringify(data, null, 2));
+      res.json({ success: true, words: data.words });
+    } else {
+      res.status(400).json({ error: '单词已存在' });
+    }
+  } catch (error) {
+    res.status(500).json({ error: '添加单词失败' });
+  }
+});
+
+// API路由：删除单词
+app.delete('/api/words/:word', (req, res) => {
+  try {
+    const wordToDelete = req.params.word.toLowerCase();
+    const data = JSON.parse(fs.readFileSync(wordlistPath, 'utf8'));
+    const index = data.words.indexOf(wordToDelete);
+    
+    if (index > -1) {
+      data.words.splice(index, 1);
+      fs.writeFileSync(wordlistPath, JSON.stringify(data, null, 2));
+      res.json({ success: true, words: data.words });
+    } else {
+      res.status(404).json({ error: '单词不存在' });
+    }
+  } catch (error) {
+    res.status(500).json({ error: '删除单词失败' });
+  }
+});
+
+// 静态文件服务
+app.use(express.static(path.join(__dirname, 'public')));
+
+// 处理所有其他路由，返回index.html
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// 设置Socket.IO
 const io = socketIo(server, {
   cors: {
     origin: "*",
     methods: ["GET", "POST"]
   }
 });
-
-// 中间件
-app.use(cors());
-app.use(express.static(path.join(__dirname, 'public')));
 
 // 游戏状态管理
 const gameState = {
@@ -315,27 +389,13 @@ io.on('connection', (socket) => {
   }
 });
 
-// 创建前端HTTP服务器
-const frontendApp = express();
-frontendApp.use(express.static(path.join(__dirname, 'public')));
-
-// 处理所有路由，返回index.html
-frontendApp.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
-// 启动前端服务器 (3000端口)
-const FRONTEND_PORT = 3000;
-frontendApp.listen(FRONTEND_PORT, '0.0.0.0', () => {
-  console.log(`前端服务器运行在端口 ${FRONTEND_PORT}`);
-});
-
-// 启动WebSocket服务器 (3001端口)
-const WEBSOCKET_PORT = 3001;
-server.listen(WEBSOCKET_PORT, '0.0.0.0', () => {
-  console.log(`WebSocket服务器运行在端口 ${WEBSOCKET_PORT}`);
+// 启动服务器
+const PORT = 3000;
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`前端服务器运行在端口 ${PORT}`);
+  console.log(`WebSocket服务器运行在端口 ${PORT}`);
   console.log(`\n🎮 Word Battle 已启动！`);
-  console.log(`📍 本地访问: http://localhost:${FRONTEND_PORT}`);
-  console.log(`🌐 局域网访问: http://[你的IP]:${FRONTEND_PORT}`);
+  console.log(`📍 本地访问: http://localhost:${PORT}`);
+  console.log(`🌐 局域网访问: http://[你的IP]:${PORT}`);
   console.log('服务器已准备好接受连接...\n');
 }); 

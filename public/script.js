@@ -15,6 +15,7 @@ class WordBattleClient {
     // 初始化客户端
     init() {
         this.setupUI();
+        this.setupWordManager();
         this.connectToServer();
     }
 
@@ -55,10 +56,36 @@ class WordBattleClient {
         });
     }
 
+    // 单词管理相关
+    setupWordManager() {
+        // 显示/隐藏单词管理页面
+        document.getElementById('addWordBtn').addEventListener('click', () => {
+            document.getElementById('wordManager').classList.remove('hidden');
+            document.getElementById('lobby').classList.add('hidden');
+            this.loadWords();
+        });
+
+        document.getElementById('closeWordManager').addEventListener('click', () => {
+            document.getElementById('wordManager').classList.add('hidden');
+            document.getElementById('lobby').classList.remove('hidden');
+        });
+
+        // 添加单词
+        document.getElementById('wordInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                this.addWord();
+            }
+        });
+
+        document.getElementById('addWordToList').addEventListener('click', () => {
+            this.addWord();
+        });
+    }
+
     // 连接到服务器
     connectToServer() {
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = `${protocol}//${window.location.hostname}:3001`;
+        const wsUrl = `${protocol}//${window.location.hostname}:${window.location.port || '3000'}`;
         
         this.socket = io(wsUrl);
 
@@ -475,6 +502,81 @@ class WordBattleClient {
         } else {
             this.showNotification('错误', '用户名不能为空且不能超过20个字符', 'error');
         }
+    }
+
+    // 加载单词列表
+    async loadWords() {
+        try {
+            const response = await fetch('/api/words');
+            const words = await response.json();
+            this.displayWords(words);
+        } catch (error) {
+            this.showNotification('错误', '加载单词列表失败', 'error');
+        }
+    }
+
+    // 添加新单词
+    async addWord() {
+        const input = document.getElementById('wordInput');
+        const word = input.value.trim();
+        
+        if (!word) {
+            this.showNotification('提示', '请输入单词', 'warning');
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/words', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ word })
+            });
+
+            const data = await response.json();
+            
+            if (response.ok) {
+                input.value = '';
+                this.displayWords(data.words);
+                this.showNotification('成功', '单词添加成功', 'success');
+            } else {
+                this.showNotification('错误', data.error, 'error');
+            }
+        } catch (error) {
+            this.showNotification('错误', '添加单词失败', 'error');
+        }
+    }
+
+    // 删除单词
+    async deleteWord(word) {
+        try {
+            const response = await fetch(`/api/words/${encodeURIComponent(word)}`, {
+                method: 'DELETE'
+            });
+
+            const data = await response.json();
+            
+            if (response.ok) {
+                this.displayWords(data.words);
+                this.showNotification('成功', '单词删除成功', 'success');
+            } else {
+                this.showNotification('错误', data.error, 'error');
+            }
+        } catch (error) {
+            this.showNotification('错误', '删除单词失败', 'error');
+        }
+    }
+
+    // 显示单词列表
+    displayWords(words) {
+        const wordList = document.getElementById('wordList');
+        wordList.innerHTML = words.map(word => `
+            <div class="word-item">
+                <span>${word}</span>
+                <button onclick="wordBattleClient.deleteWord('${word}')">×</button>
+            </div>
+        `).join('');
     }
 }
 

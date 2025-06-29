@@ -67,6 +67,10 @@
                     </div>
                 </section>
             </div>
+            <!-- 添加单词按钮 -->
+            <button class="add-word-btn" id="addWordBtn">
+                <span>+</span>
+            </button>
         </main>
 
         <!-- 房间界面 -->
@@ -96,6 +100,26 @@
                     </div>
                 </div>
             </main>
+        </div>
+
+        <!-- 单词管理页面 -->
+        <div class="word-manager hidden" id="wordManager">
+            <div class="word-manager-content">
+                <div class="word-manager-header">
+                    <h2>单词管理</h2>
+                    <button class="btn btn-secondary" id="closeWordManager">返回</button>
+                </div>
+                <div class="word-input-section">
+                    <div class="input-group">
+                        <input type="text" id="wordInput" placeholder="输入英语单词" maxlength="50">
+                        <button class="btn btn-primary" id="addWordToList">添加</button>
+                    </div>
+                </div>
+                <div class="word-list-section">
+                    <h3>单词库</h3>
+                    <div class="word-list" id="wordList"></div>
+                </div>
+            </div>
         </div>
     </div>
 
