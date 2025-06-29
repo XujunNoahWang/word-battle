@@ -1,0 +1,23 @@
+{
+  "name": "word-battle",
+  "version": "1.0.0",
+  "description": "多人在线Word Battle游戏平台",
+  "main": "server.js",
+  "scripts": {
+    "start": "node start.js",
+    "dev": "nodemon start.js",
+    "server": "node server.js",
+    "stop": "taskkill /f /im node.exe || true"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "socket.io": "^4.7.4",
+    "cors": "^2.8.5"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  },
+  "keywords": ["websocket", "multiplayer", "game", "realtime"],
+  "author": "Word Battle Team",
+  "license": "MIT"
+} 

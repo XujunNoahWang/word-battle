@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Word Battle - 多人在线游戏</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- 加载状态 -->
+    <div id="loading" class="loading-screen">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <p>连接中...</p>
+        </div>
+    </div>
+
+    <!-- 主应用容器 -->
+    <div id="app" class="app hidden">
+        <!-- 头部 -->
+        <header class="header">
+            <div class="header-content">
+                <h1 class="logo">Word Battle</h1>
+                <div class="player-info">
+                    <span class="player-badge" id="playerBadge">连接中...</span>
+                    <div class="status-indicator" id="statusIndicator"></div>
+                </div>
+            </div>
+        </header>
+
+        <!-- 游戏大厅 -->
+        <main class="main-content" id="lobby">
+            <div class="content-grid">
+                <!-- 在线玩家面板 -->
+                <section class="panel players-panel">
+                    <div class="panel-header">
+                        <h2>在线玩家</h2>
+                        <span class="count-badge" id="playersCount">0</span>
+                    </div>
+                    <div class="panel-content">
+                        <div class="players-list" id="playersList">
+                            <div class="empty-state">
+                                <p>暂无其他玩家在线</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 游戏房间面板 -->
+                <section class="panel rooms-panel">
+                    <div class="panel-header">
+                        <h2>游戏房间</h2>
+                        <button class="btn btn-primary" id="createRoomBtn">
+                            <span>创建房间</span>
+                        </button>
+                    </div>
+                    <div class="panel-content">
+                        <div class="rooms-list" id="roomsList">
+                            <div class="empty-state">
+                                <p>暂无活动房间</p>
+                                <p class="hint">点击"创建房间"开始游戏</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+
+        <!-- 房间界面 -->
+        <div class="room-view hidden" id="roomView">
+            <div class="room-header">
+                <button class="btn btn-secondary" id="leaveRoomBtn">
+                    <span>← 返回大厅</span>
+                </button>
+                <h2 class="room-title" id="roomTitle">游戏房间</h2>
+                <div class="room-actions">
+                    <button class="btn btn-primary hidden" id="startGameBtn">开始游戏</button>
+                </div>
+            </div>
+            
+            <div class="room-content">
+                <div class="room-players">
+                    <h3>房间玩家</h3>
+                    <div class="room-players-list" id="roomPlayersList"></div>
+                </div>
+                
+                <div class="game-area">
+                    <div class="waiting-message">
+                        <p>等待房主开始游戏...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 模态框 -->
+    <div class="modal-overlay hidden" id="modalOverlay">
+        <div class="modal" id="createRoomModal">
+            <div class="modal-header">
+                <h3>创建新房间</h3>
+                <button class="close-btn" id="closeModalBtn">×</button>
+            </div>
+            <div class="modal-content">
+                <div class="form-group">
+                    <label for="roomNameInput">房间名称</label>
+                    <input type="text" id="roomNameInput" placeholder="输入房间名称" maxlength="20">
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" id="cancelCreateBtn">取消</button>
+                <button class="btn btn-primary" id="confirmCreateBtn">创建</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 通知系统 -->
+    <div class="notification-container" id="notificationContainer"></div>
+
+    <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html> 
