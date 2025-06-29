@@ -35,6 +35,12 @@ const PLAYER_STATUS = {
 io.on('connection', (socket) => {
   console.log('新用户连接:', socket.id);
 
+  // 立即发送当前游戏状态
+  socket.emit('game_state_update', {
+    players: gameState.players,
+    rooms: gameState.rooms
+  });
+
   // 处理玩家身份验证/分配
   socket.on('request_identity', (existingPlayerId) => {
     let playerId;
@@ -75,8 +81,8 @@ io.on('connection', (socket) => {
     
     // 发送当前游戏状态
     socket.emit('game_state_update', {
-      players: Object.values(gameState.players),
-      rooms: Object.values(gameState.rooms)
+      players: gameState.players,
+      rooms: gameState.rooms
     });
 
     // 广播玩家列表更新
