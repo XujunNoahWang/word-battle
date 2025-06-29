@@ -20,20 +20,8 @@ class WordBattleClient {
 
     // 设置UI事件监听
     setupUI() {
-        // 创建房间相关
+        // 创建房间 - 直接创建，使用用户名作为房间名
         document.getElementById('createRoomBtn').addEventListener('click', () => {
-            this.showCreateRoomModal();
-        });
-
-        document.getElementById('closeModalBtn').addEventListener('click', () => {
-            this.hideCreateRoomModal();
-        });
-
-        document.getElementById('cancelCreateBtn').addEventListener('click', () => {
-            this.hideCreateRoomModal();
-        });
-
-        document.getElementById('confirmCreateBtn').addEventListener('click', () => {
             this.createRoom();
         });
 
@@ -44,20 +32,6 @@ class WordBattleClient {
 
         document.getElementById('startGameBtn').addEventListener('click', () => {
             this.startGame();
-        });
-
-        // 模态框背景点击关闭
-        document.getElementById('modalOverlay').addEventListener('click', (e) => {
-            if (e.target === document.getElementById('modalOverlay')) {
-                this.hideCreateRoomModal();
-            }
-        });
-
-        // 回车键提交房间名称
-        document.getElementById('roomNameInput').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                this.createRoom();
-            }
         });
     }
 
@@ -99,6 +73,12 @@ class WordBattleClient {
         this.socket.on('game_started', (data) => {
             this.showNotification('游戏开始', data.message, 'success');
             this.showGameStartedMessage(data.message);
+        });
+
+        // 房间创建成功
+        this.socket.on('room_created', (data) => {
+            this.currentRoom = data.roomId;
+            this.showRoom();
         });
 
         // 房间解散
@@ -149,6 +129,23 @@ class WordBattleClient {
         this.updatePlayersDisplay();
         this.updateRoomsDisplay();
         this.updateRoomView();
+        this.updateCreateRoomButton();
+    }
+
+    // 更新创建房间按钮状态
+    updateCreateRoomButton() {
+        const createRoomBtn = document.getElementById('createRoomBtn');
+        const currentPlayer = this.gameState.players.find(p => p.id === this.playerId);
+        
+        if (currentPlayer && currentPlayer.status === 'in_room') {
+            createRoomBtn.disabled = true;
+            createRoomBtn.innerHTML = '<span>已在房间中</span>';
+            createRoomBtn.classList.add('disabled');
+        } else {
+            createRoomBtn.disabled = false;
+            createRoomBtn.innerHTML = '<span>创建房间</span>';
+            createRoomBtn.classList.remove('disabled');
+        }
     }
 
     // 更新玩家列表显示
@@ -157,7 +154,7 @@ class WordBattleClient {
         const playersCount = document.getElementById('playersCount');
         
         // 显示所有在线玩家（包括自己），过滤掉离线玩家
-        const onlinePlayers = this.gameState.players.filter(p => p.status !== 'offline');
+        const onlinePlayers = Object.values(this.gameState.players).filter(p => p.status !== 'offline');
         
         playersCount.textContent = onlinePlayers.length;
 
@@ -189,7 +186,9 @@ class WordBattleClient {
     // 更新房间列表显示
     updateRoomsDisplay() {
         const roomsContainer = document.getElementById('roomsList');
-        const rooms = this.gameState.rooms.filter(room => !room.gameStarted);
+        const rooms = Object.values(this.gameState.rooms).filter(room => !room.gameStarted);
+        const currentPlayer = this.gameState.players[this.playerId];
+        const isPlayerInRoom = currentPlayer && currentPlayer.status === 'in_room';
 
         if (rooms.length === 0) {
             roomsContainer.innerHTML = `
@@ -201,94 +200,105 @@ class WordBattleClient {
             return;
         }
 
-        roomsContainer.innerHTML = rooms.map(room => `
-            <div class="room-item" onclick="wordBattleClient.joinRoom('${room.id}')">
-                <div class="room-header">
-                    <span class="room-name">${room.name}</span>
-                    <span class="room-players-count">${room.players.length} 人</span>
+        roomsContainer.innerHTML = rooms.map(room => {
+            const isCurrentRoom = room.id === this.currentRoom;
+            const hostPlayer = this.gameState.players[room.host];
+            return `
+                <div class="room-item ${isCurrentRoom ? 'current-room' : ''}">
+                    <div class="room-info">
+                        <span class="room-name">${hostPlayer.name}的房间</span>
+                        <span class="player-count">${room.players.length}人</span>
+                    </div>
+                    ${!isPlayerInRoom ? `
+                        <button class="btn btn-primary join-room-btn" onclick="wordBattleClient.joinRoom('${room.id}')">
+                            加入房间
+                        </button>
+                    ` : ''}
                 </div>
-                <div class="room-info">
-                    房主: ${room.host} | 状态: ${room.gameStarted ? '游戏中' : '等待中'}
-                </div>
-            </div>
-        `).join('');
+            `;
+        }).join('');
     }
 
     // 更新房间视图
     updateRoomView() {
         if (!this.currentRoom) return;
 
-        const room = this.gameState.rooms.find(r => r.id === this.currentRoom);
-        if (!room) {
-            this.currentRoom = null;
-            this.showLobby();
-            return;
-        }
+        const room = this.gameState.rooms[this.currentRoom];
+        if (!room) return;
 
-        // 更新房间标题
-        document.getElementById('roomTitle').textContent = room.name;
+        const roomPlayersList = document.getElementById('roomPlayersList');
+        const startGameBtn = document.getElementById('startGameBtn');
+        const roomTitle = document.getElementById('roomTitle');
+        const roomStatus = document.querySelector('.room-status');
+        const roomHostName = document.getElementById('roomHostName');
+
+        // 更新房间标题和状态
+        const hostPlayer = this.gameState.players[room.host];
+        roomTitle.textContent = `${hostPlayer.name}的房间`;
+        roomHostName.textContent = hostPlayer.name;
+        roomStatus.textContent = room.gameStarted ? '游戏进行中' : '等待玩家加入...';
 
         // 显示/隐藏开始游戏按钮
-        const startBtn = document.getElementById('startGameBtn');
         if (room.host === this.playerId && !room.gameStarted) {
-            startBtn.classList.remove('hidden');
+            startGameBtn.classList.remove('hidden');
         } else {
-            startBtn.classList.add('hidden');
+            startGameBtn.classList.add('hidden');
         }
 
-        // 更新房间玩家列表
-        const roomPlayersContainer = document.getElementById('roomPlayersList');
-        roomPlayersContainer.innerHTML = room.players.map(playerId => {
-            const player = this.gameState.players.find(p => p.id === playerId);
-            const isHost = playerId === room.host;
-            
+        // 更新玩家列表
+        roomPlayersList.innerHTML = room.players.map(playerId => {
+            const player = this.gameState.players[playerId];
+            const isHost = room.host === playerId;
+            const isCurrentPlayer = playerId === this.playerId;
+            const statusClass = isHost ? 'host' : 'ready';
+            const statusText = isHost ? '房主' : '准备中';
+            const initial = player.name.charAt(0).toUpperCase();
+
             return `
                 <div class="room-player-item">
-                    <span class="room-player-name">${player ? player.name : playerId}</span>
-                    ${isHost ? '<span class="host-badge">房主</span>' : ''}
+                    <div class="room-player-info">
+                        <div class="room-player-avatar">
+                            ${initial}
+                        </div>
+                        <span class="room-player-name">
+                            ${player.name}
+                            ${isCurrentPlayer ? ' (你)' : ''}
+                        </span>
+                    </div>
+                    <span class="room-player-status ${statusClass}">
+                        ${statusText}
+                    </span>
                 </div>
             `;
         }).join('');
     }
 
-    // 显示创建房间模态框
-    showCreateRoomModal() {
-        document.getElementById('modalOverlay').classList.remove('hidden');
-        document.getElementById('roomNameInput').focus();
-    }
-
-    // 隐藏创建房间模态框
-    hideCreateRoomModal() {
-        document.getElementById('modalOverlay').classList.add('hidden');
-        document.getElementById('roomNameInput').value = '';
-    }
-
     // 创建房间
     createRoom() {
-        const roomName = document.getElementById('roomNameInput').value.trim();
-        
-        if (!roomName) {
-            this.showNotification('输入错误', '请输入房间名称', 'error');
-            return;
-        }
-
-        if (roomName.length > 20) {
-            this.showNotification('输入错误', '房间名称不能超过20个字符', 'error');
+        // 检查是否已在房间中
+        const currentPlayer = this.gameState.players[this.playerId];
+        if (currentPlayer && currentPlayer.status === 'in_room') {
+            this.showNotification('创建失败', '您已在房间中，请先退出当前房间', 'warning');
             return;
         }
 
         this.socket.emit('create_room', {
-            playerId: this.playerId,
-            roomName: roomName
+            playerId: this.playerId
         });
 
-        this.hideCreateRoomModal();
-        this.showNotification('创建房间', `房间 "${roomName}" 创建成功`, 'success');
+        this.showNotification('创建房间', '房间创建成功', 'success');
     }
 
     // 加入房间
     joinRoom(roomId) {
-        const room = this.gameState.rooms.find(r => r.id === roomId);
+        // 检查是否已在房间中
+        const currentPlayer = this.gameState.players[this.playerId];
+        if (currentPlayer && currentPlayer.status === 'in_room') {
+            this.showNotification('加入失败', '您已在房间中，请先退出当前房间', 'warning');
+            return;
+        }
+
+        const room = this.gameState.rooms[roomId];
         
         if (!room) {
             this.showNotification('加入失败', '房间不存在', 'error');
@@ -307,7 +317,9 @@ class WordBattleClient {
 
         this.currentRoom = roomId;
         this.showRoom();
-        this.showNotification('加入房间', `已加入房间 "${room.name}"`, 'success');
+        
+        const hostPlayer = this.gameState.players[room.host];
+        this.showNotification('加入房间', `已加入${hostPlayer.name}的房间`, 'success');
     }
 
     // 离开房间

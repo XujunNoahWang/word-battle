@@ -85,7 +85,7 @@ io.on('connection', (socket) => {
 
   // 创建房间
   socket.on('create_room', (data) => {
-    const { playerId, roomName } = data;
+    const { playerId } = data;
     const player = gameState.players[playerId];
     
     if (!player) return;
@@ -93,7 +93,7 @@ io.on('connection', (socket) => {
     const roomId = `room_${Date.now()}`;
     gameState.rooms[roomId] = {
       id: roomId,
-      name: roomName,
+      name: player.name,
       players: [playerId],
       host: playerId,
       gameStarted: false
@@ -105,7 +105,13 @@ io.on('connection', (socket) => {
     
     socket.join(roomId);
     
-    console.log(`${playerId} 创建房间: ${roomName}`);
+    console.log(`${playerId} 创建房间: ${player.name}`);
+    
+    // 向创建者发送房间创建成功事件
+    socket.emit('room_created', {
+      roomId: roomId,
+      roomName: player.name
+    });
     
     // 广播状态更新
     broadcastGameStateUpdate();
@@ -266,14 +272,14 @@ io.on('connection', (socket) => {
 
   // 广播玩家列表更新
   function broadcastPlayersUpdate() {
-    io.emit('players_update', Object.values(gameState.players));
+    io.emit('players_update', gameState.players);
   }
 
   // 广播游戏状态更新
   function broadcastGameStateUpdate() {
     io.emit('game_state_update', {
-      players: Object.values(gameState.players),
-      rooms: Object.values(gameState.rooms)
+      players: gameState.players,
+      rooms: gameState.rooms
     });
   }
 });

@@ -71,48 +71,31 @@
 
         <!-- 房间界面 -->
         <div class="room-view hidden" id="roomView">
-            <div class="room-header">
-                <button class="btn btn-secondary" id="leaveRoomBtn">
-                    <span>← 返回大厅</span>
-                </button>
-                <h2 class="room-title" id="roomTitle">游戏房间</h2>
-                <div class="room-actions">
-                    <button class="btn btn-primary hidden" id="startGameBtn">开始游戏</button>
-                </div>
-            </div>
-            
-            <div class="room-content">
-                <div class="room-players">
-                    <h3>房间玩家</h3>
-                    <div class="room-players-list" id="roomPlayersList"></div>
-                </div>
-                
-                <div class="game-area">
-                    <div class="waiting-message">
-                        <p>等待房主开始游戏...</p>
+            <main class="room-content">
+                <div class="room-card">
+                    <div class="room-card-header">
+                        <div class="room-info">
+                            <h2 class="room-title" id="roomTitle">player3的房间</h2>
+                            <span class="room-status">等待玩家加入...</span>
+                        </div>
+                        <div class="room-actions">
+                            <button class="btn btn-secondary" id="leaveRoomBtn">
+                                退出房间
+                            </button>
+                            <button class="btn btn-primary hidden" id="startGameBtn">
+                                开始游戏
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="room-card-content">
+                        <div class="room-players">
+                            <h3>房主：<span id="roomHostName">player3</span></h3>
+                            <div class="room-players-list" id="roomPlayersList"></div>
+                        </div>
                     </div>
                 </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- 模态框 -->
-    <div class="modal-overlay hidden" id="modalOverlay">
-        <div class="modal" id="createRoomModal">
-            <div class="modal-header">
-                <h3>创建新房间</h3>
-                <button class="close-btn" id="closeModalBtn">×</button>
-            </div>
-            <div class="modal-content">
-                <div class="form-group">
-                    <label for="roomNameInput">房间名称</label>
-                    <input type="text" id="roomNameInput" placeholder="输入房间名称" maxlength="20">
-                </div>
-            </div>
-            <div class="modal-actions">
-                <button class="btn btn-secondary" id="cancelCreateBtn">取消</button>
-                <button class="btn btn-primary" id="confirmCreateBtn">创建</button>
-            </div>
+            </main>
         </div>
     </div>
 
