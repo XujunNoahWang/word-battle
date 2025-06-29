@@ -5,8 +5,8 @@ class WordBattleClient {
         this.playerId = null;
         this.currentRoom = null;
         this.gameState = {
-            players: [],
-            rooms: []
+            players: {},
+            rooms: {}
         };
         
         this.init();
@@ -135,7 +135,7 @@ class WordBattleClient {
     // 更新创建房间按钮状态
     updateCreateRoomButton() {
         const createRoomBtn = document.getElementById('createRoomBtn');
-        const currentPlayer = this.gameState.players.find(p => p.id === this.playerId);
+        const currentPlayer = this.gameState.players[this.playerId];
         
         if (currentPlayer && currentPlayer.status === 'in_room') {
             createRoomBtn.disabled = true;

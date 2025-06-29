@@ -22,11 +22,11 @@ function getLocalIPs() {
 function cleanupPorts() {
     return new Promise((resolve) => {
         if (process.platform === 'win32') {
-            exec('taskkill /f /im node.exe 2>nul', () => {
+            exec('for /f "tokens=5" %a in (\'netstat -aon ^| findstr :3000\') do taskkill /F /PID %a 2>nul', () => {
                 setTimeout(resolve, 1000);
             });
         } else {
-            exec('pkill -f node', () => {
+            exec('lsof -ti:3000 | xargs kill -9', () => {
                 setTimeout(resolve, 1000);
             });
         }
