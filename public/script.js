@@ -130,9 +130,29 @@ class WordBattleClient {
         });
 
         // 游戏开始
-        this.socket.on('game_started', (data) => {
-            this.showNotification('游戏开始', data.message, 'success');
-            this.showGameStartedMessage(data.message);
+        this.socket.on('game_started', (gameData) => {
+            this.showGameView(gameData);
+        });
+
+        // 下一题
+        this.socket.on('next_question', (data) => {
+            this.updateGameView(data);
+        });
+
+        // 游戏结束
+        this.socket.on('game_over', () => {
+            this.showGameOver();
+        });
+
+        // 答题结果
+        this.socket.on('answer_result', (data) => {
+            const { isCorrect, progress } = data;
+            this.showNotification(
+                isCorrect ? '答对了！' : '答错了！',
+                isCorrect ? '继续保持！' : '下次加油！',
+                isCorrect ? 'success' : 'error'
+            );
+            this.updateProgress(progress);
         });
 
         // 房间创建成功
@@ -175,6 +195,16 @@ class WordBattleClient {
             } else {
                 this.showNotification('图片下载', `单词 "${data.word}" 的图片${data.message}`, 'warning');
             }
+        });
+
+        // 游戏完成
+        this.socket.on('game_completed', (results) => {
+            this.showGameResults(results);
+        });
+
+        // 所有玩家完成
+        this.socket.on('all_players_completed', (results) => {
+            this.showAllPlayersResults(results);
         });
     }
 
@@ -423,34 +453,92 @@ class WordBattleClient {
     showLobby() {
         document.getElementById('lobby').classList.remove('hidden');
         document.getElementById('roomView').classList.add('hidden');
+        document.getElementById('gameView').classList.add('hidden');
     }
 
     // 显示房间
     showRoom() {
         document.getElementById('lobby').classList.add('hidden');
         document.getElementById('roomView').classList.remove('hidden');
+        document.getElementById('gameView').classList.add('hidden');
     }
 
-    // 显示游戏开始消息
-    showGameStartedMessage(message) {
-        const gameArea = document.querySelector('.game-area');
-        gameArea.innerHTML = `
-            <div class="game-started-message">
-                <h2 style="color: var(--primary-color); margin-bottom: var(--spacing-md);">${message}</h2>
-                <p style="color: var(--text-secondary);">游戏即将开始...</p>
+    // 显示游戏页面
+    showGameView(gameData) {
+        // 隐藏其他视图
+        document.getElementById('lobby').classList.add('hidden');
+        document.getElementById('roomView').classList.add('hidden');
+        
+        // 显示游戏视图
+        const gameView = document.getElementById('gameView');
+        gameView.classList.remove('hidden');
+        
+        this.updateGameView(gameData);
+    }
+
+    // 更新游戏视图
+    updateGameView(data) {
+        const { word, images } = data;
+        
+        // 显示单词
+        document.getElementById('currentWord').textContent = word;
+        
+        // 显示图片选项
+        const imageGrid = document.querySelector('.image-grid');
+        imageGrid.innerHTML = images.map(image => `
+            <div class="image-item" onclick="wordBattleClient.selectAnswer('${image}')">
+                <img src="/data/images/${image}.jpg" alt="选项">
+            </div>
+        `).join('');
+    }
+
+    // 处理答题选择
+    selectAnswer(selectedImage) {
+        this.socket.emit('answer_selected', {
+            playerId: this.playerId,
+            roomId: this.currentRoom,
+            selectedImage: selectedImage
+        });
+    }
+
+    // 显示游戏结束
+    showGameOver() {
+        const gameView = document.getElementById('gameView');
+        gameView.innerHTML = `
+            <div class="game-over">
+                <h2>游戏结束！</h2>
+                <button class="btn btn-primary" onclick="wordBattleClient.returnToRoom()">
+                    返回房间
+                </button>
             </div>
         `;
-        
-        // 5秒后恢复等待状态
-        setTimeout(() => {
-            if (gameArea.querySelector('.game-started-message')) {
-                gameArea.innerHTML = `
-                    <div class="waiting-message">
-                        <p>等待房主开始游戏...</p>
+    }
+
+    // 返回房间
+    returnToRoom() {
+        // 重置游戏视图
+        const gameView = document.getElementById('gameView');
+        gameView.innerHTML = `
+            <main class="game-content">
+                <div class="game-container">
+                    <div class="word-display">
+                        <h2 id="currentWord"></h2>
                     </div>
-                `;
-            }
-        }, 5000);
+                    <div class="image-grid">
+                        <!-- 图片会通过JavaScript动态添加 -->
+                    </div>
+                </div>
+            </main>
+        `;
+        
+        // 返回房间视图
+        this.showRoom();
+        
+        // 显示开始游戏按钮
+        const startGameBtn = document.getElementById('startGameBtn');
+        if (startGameBtn) {
+            startGameBtn.classList.remove('hidden');
+        }
     }
 
     // 显示通知
@@ -597,6 +685,64 @@ class WordBattleClient {
                 <button onclick="wordBattleClient.deleteWord('${word}')">×</button>
             </div>
         `).join('');
+    }
+
+    // 更新游戏进度显示
+    updateProgress(progress) {
+        document.getElementById('current-progress').textContent = progress.current;
+        document.getElementById('total-questions').textContent = progress.total;
+        document.getElementById('correct-answers').textContent = progress.correct;
+    }
+
+    // 显示游戏结果
+    showGameResults(results) {
+        const gameView = document.getElementById('gameView');
+        gameView.innerHTML = `
+            <div class="results-container">
+                <h2>游戏结束</h2>
+                <div class="personal-result">
+                    <h3>你的成绩</h3>
+                    <p>用时: ${results.totalTime.toFixed(1)} 秒</p>
+                    <p>正确率: ${results.accuracy.toFixed(1)}%</p>
+                    <p>答对题数: ${results.correctAnswers}/${results.totalQuestions}</p>
+                </div>
+            </div>
+        `;
+    }
+
+    // 显示所有玩家的最终成绩
+    showAllPlayersResults(results) {
+        const resultsDiv = document.querySelector('.results-container');
+        
+        let allPlayersHtml = '<div class="all-players-results"><h3>所有玩家成绩</h3><table>';
+        allPlayersHtml += '<tr><th>玩家</th><th>用时(秒)</th><th>正确率</th><th>答对题数</th></tr>';
+        
+        // 按完成时间排序
+        const sortedPlayers = Object.entries(results).sort((a, b) => a[1].totalTime - b[1].totalTime);
+        
+        sortedPlayers.forEach(([playerId, data]) => {
+            allPlayersHtml += `
+                <tr>
+                    <td>${data.name}</td>
+                    <td>${data.totalTime.toFixed(1)}</td>
+                    <td>${data.accuracy.toFixed(1)}%</td>
+                    <td>${data.correctAnswers}</td>
+                </tr>
+            `;
+        });
+        
+        allPlayersHtml += '</table></div>';
+        resultsDiv.innerHTML += allPlayersHtml;
+        
+        // 添加重新开始按钮
+        const restartButton = document.createElement('button');
+        restartButton.textContent = '返回大厅';
+        restartButton.className = 'restart-button';
+        restartButton.onclick = () => {
+            this.showRoom();
+            this.socket.emit('leave_game');
+        };
+        resultsDiv.appendChild(restartButton);
     }
 }
 

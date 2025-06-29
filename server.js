@@ -187,12 +187,8 @@ const io = socketIo(server, {
   }
 });
 
-// 游戏状态管理
-const gameState = {
-  players: {}, // playerId -> { id, socketId, name, status, room }
-  rooms: {},   // roomId -> { id, name, players, host, gameStarted }
-  playerCounter: 0
-};
+// 读取单词列表
+const wordlist = JSON.parse(fs.readFileSync('data/wordlist.json', 'utf8')).words;
 
 // 玩家状态枚举
 const PLAYER_STATUS = {
@@ -200,6 +196,46 @@ const PLAYER_STATUS = {
   IN_ROOM: 'in_room', // 房间中
   OFFLINE: 'offline'  // 离线状态
 };
+
+// 游戏状态管理
+const gameState = {
+  players: {}, // playerId -> { id, socketId, name, status, room }
+  rooms: {},   // roomId -> { id, name, players, host, gameStarted, usedWords, questions, playerProgress }
+  playerCounter: 0
+};
+
+// 获取随机单词和图片选项
+function getRandomWordAndImages(usedWords) {
+  // 过滤掉已使用的单词
+  const availableWords = wordlist.filter(word => !usedWords.includes(word));
+  if (availableWords.length === 0) return null;
+
+  // 随机选择一个单词
+  const word = availableWords[Math.floor(Math.random() * availableWords.length)];
+  
+  // 准备图片选项（1个正确，3个干扰）
+  const otherWords = wordlist.filter(w => w !== word);
+  const distractors = otherWords.sort(() => Math.random() - 0.5).slice(0, 3);
+  const images = [...distractors, word].sort(() => Math.random() - 0.5);
+
+  return { word, images };
+}
+
+// 生成题目列表
+function generateQuestions() {
+  const questions = [];
+  const usedWords = [];
+  
+  while (questions.length < wordlist.length) {
+    const gameData = getRandomWordAndImages(usedWords);
+    if (!gameData) break;
+    
+    questions.push(gameData);
+    usedWords.push(gameData.word);
+  }
+  
+  return questions;
+}
 
 // WebSocket连接处理
 io.on('connection', (socket) => {
@@ -350,23 +386,108 @@ io.on('connection', (socket) => {
     broadcastGameStateUpdate();
   });
 
-  // 开始游戏
+  // 处理游戏开始
   socket.on('start_game', (data) => {
     const { playerId, roomId } = data;
     const room = gameState.rooms[roomId];
     
     if (!room || room.host !== playerId) return;
 
+    // 重置房间游戏状态
     room.gameStarted = true;
+    room.questions = generateQuestions();
+    room.playerProgress = {};
+    
+    // 初始化每个玩家的进度
+    room.players.forEach(pid => {
+      room.playerProgress[pid] = {
+        currentQuestion: 0,
+        correctAnswers: 0,
+        startTime: Date.now(),
+        endTime: null
+      };
+    });
     
     // 向房间内所有玩家发送游戏开始消息
-    io.to(roomId).emit('game_started', {
-      message: 'Thank you',
-      roomName: room.name
-    });
+    io.to(roomId).emit('game_started', room.questions[0]);
     
     console.log(`游戏开始: ${room.name}`);
     broadcastGameStateUpdate();
+  });
+
+  // 处理答题
+  socket.on('answer_selected', (data) => {
+    const { playerId, roomId, selectedImage } = data;
+    const room = gameState.rooms[roomId];
+    
+    if (!room || !room.gameStarted) return;
+
+    const progress = room.playerProgress[playerId];
+    if (!progress || progress.currentQuestion >= room.questions.length) return;
+
+    const currentQuestion = room.questions[progress.currentQuestion];
+    const isCorrect = selectedImage === currentQuestion.word;
+    
+    // 更新玩家进度
+    if (isCorrect) {
+      progress.correctAnswers++;
+    }
+    progress.currentQuestion++;
+    
+    // 检查是否完成所有题目
+    if (progress.currentQuestion >= room.questions.length) {
+      progress.endTime = Date.now();
+      const totalTime = (progress.endTime - progress.startTime) / 1000; // 转换为秒
+      const accuracy = (progress.correctAnswers / room.questions.length) * 100;
+      
+      // 发送个人游戏结果
+      socket.emit('game_completed', {
+        totalTime,
+        accuracy,
+        correctAnswers: progress.correctAnswers,
+        totalQuestions: room.questions.length
+      });
+      
+      // 检查是否所有玩家都完成了游戏
+      const allCompleted = room.players.every(pid => {
+        const p = room.playerProgress[pid];
+        return p && p.endTime;
+      });
+      
+      if (allCompleted) {
+        // 发送所有玩家的成绩
+        const results = {};
+        room.players.forEach(pid => {
+          const p = room.playerProgress[pid];
+          const player = gameState.players[pid];
+          results[pid] = {
+            name: player.name,
+            totalTime: (p.endTime - p.startTime) / 1000,
+            accuracy: (p.correctAnswers / room.questions.length) * 100,
+            correctAnswers: p.correctAnswers
+          };
+        });
+        
+        io.to(roomId).emit('all_players_completed', results);
+        
+        // 重置房间状态
+        room.gameStarted = false;
+        room.questions = null;
+        room.playerProgress = {};
+        broadcastGameStateUpdate();
+      }
+    } else {
+      // 发送答题结果和下一题
+      socket.emit('answer_result', { 
+        isCorrect,
+        progress: {
+          current: progress.currentQuestion,
+          total: room.questions.length,
+          correct: progress.correctAnswers
+        }
+      });
+      socket.emit('next_question', room.questions[progress.currentQuestion]);
+    }
   });
 
   // 断线处理
@@ -490,8 +611,8 @@ const PORT = 3000;
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`前端服务器运行在端口 ${PORT}`);
   console.log(`WebSocket服务器运行在端口 ${PORT}`);
-  console.log(`\n🎮 Word Battle 已启动！`);
+  console.log('\n🎮 Word Battle 已启动！');
   console.log(`📍 本地访问: http://localhost:${PORT}`);
-  console.log(`🌐 局域网访问: http://[你的IP]:${PORT}`);
+  console.log('🌐 局域网访问: http://[你的IP]:${PORT}');
   console.log('服务器已准备好接受连接...\n');
-}); 
+});
