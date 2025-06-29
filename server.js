@@ -89,6 +89,31 @@ io.on('connection', (socket) => {
     broadcastPlayersUpdate();
   });
 
+  // 更新用户名
+  socket.on('update_name', (data) => {
+    const { playerId, newName } = data;
+    const player = gameState.players[playerId];
+    
+    if (!player) return;
+
+    // 更新玩家名称
+    player.name = newName;
+    
+    // 如果玩家在房间中且是房主，更新房间名称
+    if (player.room && gameState.rooms[player.room] && gameState.rooms[player.room].host === playerId) {
+      console.log(`房主 ${playerId} 更新名称为: ${newName}`);
+    }
+
+    // 广播游戏状态更新
+    broadcastGameStateUpdate();
+    
+    // 发送成功通知
+    socket.emit('name_updated', {
+      success: true,
+      message: '用户名更新成功'
+    });
+  });
+
   // 创建房间
   socket.on('create_room', (data) => {
     const { playerId } = data;

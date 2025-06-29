@@ -33,6 +33,26 @@ class WordBattleClient {
         document.getElementById('startGameBtn').addEventListener('click', () => {
             this.startGame();
         });
+
+        // 用户名编辑
+        document.getElementById('playerBadge').addEventListener('click', () => {
+            this.showEditNameModal();
+        });
+
+        document.getElementById('cancelEditName').addEventListener('click', () => {
+            this.hideEditNameModal();
+        });
+
+        document.getElementById('confirmEditName').addEventListener('click', () => {
+            this.updatePlayerName();
+        });
+
+        // 按Enter键确认修改用户名
+        document.getElementById('newNameInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                this.updatePlayerName();
+            }
+        });
     }
 
     // 连接到服务器
@@ -53,8 +73,13 @@ class WordBattleClient {
         this.socket.on('identity_assigned', (playerId) => {
             this.playerId = playerId;
             localStorage.setItem('word_battle_player_id', playerId);
-            this.updatePlayerBadge(playerId);
-            this.showNotification('连接成功', `您的身份: ${playerId}`, 'success');
+            
+            // 获取当前玩家的名称
+            const currentPlayer = this.gameState.players[playerId];
+            const displayName = currentPlayer ? currentPlayer.name : playerId;
+            
+            this.updatePlayerBadge(displayName);
+            this.showNotification('连接成功', `您的身份: ${displayName}`, 'success');
         });
 
         // 游戏状态更新
@@ -65,7 +90,15 @@ class WordBattleClient {
 
         // 玩家列表更新
         this.socket.on('players_update', (players) => {
+            const oldName = this.gameState.players[this.playerId]?.name;
             this.gameState.players = players;
+            
+            // 如果当前玩家的名字发生变化，显示更新提示
+            const newName = players[this.playerId]?.name;
+            if (oldName && newName && oldName !== newName) {
+                this.showNotification('名字已更新', `您的身份: ${newName}`, 'success');
+            }
+            
             this.updatePlayersDisplay();
         });
 
@@ -155,6 +188,12 @@ class WordBattleClient {
         
         // 显示所有在线玩家（包括自己），过滤掉离线玩家
         const onlinePlayers = Object.values(this.gameState.players).filter(p => p.status !== 'offline');
+        
+        // 更新header右上角的用户名显示
+        const currentPlayer = this.gameState.players[this.playerId];
+        if (currentPlayer) {
+            this.updatePlayerBadge(currentPlayer.name);
+        }
         
         playersCount.textContent = onlinePlayers.length;
 
@@ -400,6 +439,42 @@ class WordBattleClient {
                 }, 300);
             }
         }, 3000);
+    }
+
+    // 显示用户名编辑弹窗
+    showEditNameModal() {
+        const modal = document.getElementById('editNameModal');
+        const input = document.getElementById('newNameInput');
+        const currentPlayer = this.gameState.players[this.playerId];
+        
+        input.value = currentPlayer.name;
+        modal.classList.remove('hidden');
+        modal.classList.add('show');
+        input.focus();
+        input.select();
+    }
+
+    // 隐藏用户名编辑弹窗
+    hideEditNameModal() {
+        const modal = document.getElementById('editNameModal');
+        modal.classList.remove('show');
+        setTimeout(() => modal.classList.add('hidden'), 300);
+    }
+
+    // 更新用户名
+    updatePlayerName() {
+        const input = document.getElementById('newNameInput');
+        const newName = input.value.trim();
+        
+        if (newName && newName.length <= 20) {
+            this.socket.emit('update_name', {
+                playerId: this.playerId,
+                newName: newName
+            });
+            this.hideEditNameModal();
+        } else {
+            this.showNotification('错误', '用户名不能为空且不能超过20个字符', 'error');
+        }
     }
 }
 

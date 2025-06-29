@@ -1,6 +1,6 @@
 {
   "name": "word-battle",
-  "version": "1.0.0",
+  "version": "0.2.3",
   "description": "多人在线Word Battle游戏平台",
   "main": "server.js",
   "scripts": {
