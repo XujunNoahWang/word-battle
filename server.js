@@ -4,9 +4,14 @@ const socketIo = require('socket.io');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
+const axios = require('axios');
 
 const app = express();
 const server = http.createServer(app);
+
+// Unsplash API配置
+const UNSPLASH_API_KEY = 'GBayXIrx01WPNmvZGein21eq_e1SQPk-m5lH6xddfGI';
+const UNSPLASH_API_URL = 'https://api.unsplash.com';
 
 // 中间件
 app.use(cors());
@@ -18,10 +23,56 @@ if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir);
 }
 
+// 确保images目录存在
+const imagesDir = path.join(dataDir, 'images');
+if (!fs.existsSync(imagesDir)) {
+  fs.mkdirSync(imagesDir);
+}
+
 // 确保wordlist.json文件存在
 const wordlistPath = path.join(dataDir, 'wordlist.json');
 if (!fs.existsSync(wordlistPath)) {
   fs.writeFileSync(wordlistPath, JSON.stringify({ words: [] }));
+}
+
+// 从Unsplash获取图片
+async function getImageFromUnsplash(word) {
+  try {
+    const response = await axios.get(`${UNSPLASH_API_URL}/search/photos`, {
+      headers: {
+        'Authorization': `Client-ID ${UNSPLASH_API_KEY}`
+      },
+      params: {
+        query: word,
+        per_page: 1
+      }
+    });
+
+    if (response.data.results && response.data.results.length > 0) {
+      return response.data.results[0].urls.regular;
+    }
+    return null;
+  } catch (error) {
+    console.error('获取Unsplash图片失败:', error.message);
+    return null;
+  }
+}
+
+// 下载图片
+async function downloadImage(url, word) {
+  try {
+    const response = await axios({
+      url,
+      responseType: 'arraybuffer'
+    });
+
+    const imagePath = path.join(imagesDir, `${word}.jpg`);
+    fs.writeFileSync(imagePath, response.data);
+    return true;
+  } catch (error) {
+    console.error('下载图片失败:', error.message);
+    return false;
+  }
 }
 
 // API路由：获取单词列表
@@ -35,7 +86,7 @@ app.get('/api/words', (req, res) => {
 });
 
 // API路由：添加新单词
-app.post('/api/words', (req, res) => {
+app.post('/api/words', async (req, res) => {
   try {
     const { word } = req.body;
     if (!word || typeof word !== 'string') {
@@ -43,11 +94,47 @@ app.post('/api/words', (req, res) => {
     }
 
     const data = JSON.parse(fs.readFileSync(wordlistPath, 'utf8'));
-    if (!data.words.includes(word.toLowerCase())) {
-      data.words.push(word.toLowerCase());
-      data.words.sort(); // 按字母顺序排序
+    const normalizedWord = word.toLowerCase();
+    
+    if (!data.words.includes(normalizedWord)) {
+      // 保存单词
+      data.words.push(normalizedWord);
+      data.words.sort();
       fs.writeFileSync(wordlistPath, JSON.stringify(data, null, 2));
-      res.json({ success: true, words: data.words });
+      
+      // 发送单词保存成功的响应
+      res.json({ 
+        success: true, 
+        words: data.words,
+        message: '单词添加成功',
+        imageStatus: 'pending'
+      });
+
+      // 异步下载图片
+      const imageUrl = await getImageFromUnsplash(normalizedWord);
+      if (imageUrl) {
+        const downloaded = await downloadImage(imageUrl, normalizedWord);
+        // 通过WebSocket通知客户端图片下载状态
+        if (downloaded) {
+          io.emit('image_downloaded', {
+            word: normalizedWord,
+            success: true,
+            message: '图片下载成功'
+          });
+        } else {
+          io.emit('image_downloaded', {
+            word: normalizedWord,
+            success: false,
+            message: '图片下载失败'
+          });
+        }
+      } else {
+        io.emit('image_downloaded', {
+          word: normalizedWord,
+          success: false,
+          message: '未找到相关图片'
+        });
+      }
     } else {
       res.status(400).json({ error: '单词已存在' });
     }
@@ -64,8 +151,16 @@ app.delete('/api/words/:word', (req, res) => {
     const index = data.words.indexOf(wordToDelete);
     
     if (index > -1) {
+      // 删除单词
       data.words.splice(index, 1);
       fs.writeFileSync(wordlistPath, JSON.stringify(data, null, 2));
+      
+      // 删除对应的图片
+      const imagePath = path.join(imagesDir, `${wordToDelete}.jpg`);
+      if (fs.existsSync(imagePath)) {
+        fs.unlinkSync(imagePath);
+      }
+      
       res.json({ success: true, words: data.words });
     } else {
       res.status(404).json({ error: '单词不存在' });
@@ -77,6 +172,7 @@ app.delete('/api/words/:word', (req, res) => {
 
 // 静态文件服务
 app.use(express.static(path.join(__dirname, 'public')));
+app.use('/data/images', express.static(path.join(__dirname, 'data', 'images')));
 
 // 处理所有其他路由，返回index.html
 app.get('*', (req, res) => {

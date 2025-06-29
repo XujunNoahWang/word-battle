@@ -165,6 +165,17 @@ class WordBattleClient {
             this.requestIdentity();
             this.showNotification('重新连接', '连接已恢复', 'success');
         });
+
+        // 图片下载完成事件
+        this.socket.on('image_downloaded', (data) => {
+            if (data.success) {
+                this.showNotification('图片下载', `单词 "${data.word}" 的图片${data.message}`, 'success');
+                // 刷新显示以更新图片
+                this.loadWords();
+            } else {
+                this.showNotification('图片下载', `单词 "${data.word}" 的图片${data.message}`, 'warning');
+            }
+        });
     }
 
     // 请求身份验证
@@ -539,7 +550,7 @@ class WordBattleClient {
             if (response.ok) {
                 input.value = '';
                 this.displayWords(data.words);
-                this.showNotification('成功', '单词添加成功', 'success');
+                this.showNotification('成功', data.message, 'success');
             } else {
                 this.showNotification('错误', data.error, 'error');
             }
@@ -573,7 +584,16 @@ class WordBattleClient {
         const wordList = document.getElementById('wordList');
         wordList.innerHTML = words.map(word => `
             <div class="word-item">
-                <span>${word}</span>
+                <div class="word-content">
+                    <div class="word-image-container">
+                        <img src="/data/images/${word}.jpg" 
+                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" 
+                             alt="${word}"
+                             class="word-image" />
+                        <div class="word-image-placeholder">⌛️</div>
+                    </div>
+                    <span>${word}</span>
+                </div>
                 <button onclick="wordBattleClient.deleteWord('${word}')">×</button>
             </div>
         `).join('');
