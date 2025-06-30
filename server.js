@@ -201,9 +201,9 @@ const PLAYER_STATUS = {
 
 // 游戏状态管理
 const gameState = {
-  players: {}, // playerId -> { id, socketId, name, status, room }
-  rooms: {},   // roomId -> { id, name, players, host, gameStarted, usedWords, questions, playerProgress }
-  playerCounter: 0
+  players: {},
+  rooms: {},
+  playerCounter: 0  // 添加玩家计数器
 };
 
 // 获取随机单词和图片选项
@@ -249,35 +249,48 @@ io.on('connection', (socket) => {
     rooms: gameState.rooms
   });
 
-  // 处理玩家身份验证/分配
+  // 处理身份请求
   socket.on('request_identity', (data) => {
-    // 直接分配新身份
-    gameState.playerCounter++;
-    const playerId = `player${gameState.playerCounter}`;
+    const { savedId, savedName } = data;
+    let playerId;
     
-    // 使用保存的名字或默认使用playerId作为名字
-    const playerName = (data && data.savedName) ? data.savedName : playerId;
+    // 检查是否是同一设备的重连
+    const existingPlayer = Object.values(gameState.players).find(
+        player => player.socketId === socket.id || 
+                 (savedId && player.id === savedId && !player.socketId) // 断线的玩家
+    );
     
-    gameState.players[playerId] = {
-      id: playerId,
-      socketId: socket.id,
-      name: playerName,
-      status: PLAYER_STATUS.IDLE,
-      room: null
-    };
-    console.log(`新玩家分配身份: ${playerId}, 名字: ${playerName}`);
-
-    // 发送身份给客户端
+    if (existingPlayer) {
+        // 如果是同一设备重连
+        playerId = existingPlayer.id;
+        existingPlayer.socketId = socket.id;
+        existingPlayer.status = existingPlayer.status === PLAYER_STATUS.OFFLINE ? 
+                              PLAYER_STATUS.IDLE : existingPlayer.status;
+        
+        console.log(`玩家重连: ${playerId}, 名字: ${existingPlayer.name}`);
+    } else {
+        // 生成新的玩家ID
+        gameState.playerCounter++;
+        playerId = `player${gameState.playerCounter}`;
+        
+        // 创建新玩家
+        gameState.players[playerId] = {
+            id: playerId,
+            name: savedName || playerId,
+            socketId: socket.id,
+            status: PLAYER_STATUS.IDLE,
+            room: null,
+            deviceId: socket.handshake.address // 记录设备IP地址
+        };
+        
+        console.log(`新玩家分配身份: ${playerId}, 名字: ${gameState.players[playerId].name}`);
+    }
+    
+    // 发送身份信息给客户端
     socket.emit('identity_assigned', playerId);
     
-    // 发送当前游戏状态
-    socket.emit('game_state_update', {
-      players: gameState.players,
-      rooms: gameState.rooms
-    });
-
-    // 广播玩家列表更新
-    broadcastPlayersUpdate();
+    // 广播更新
+    broadcastGameStateUpdate();
   });
 
   // 更新用户名
@@ -578,39 +591,62 @@ io.on('connection', (socket) => {
     
     // 查找断线的玩家
     const playerId = Object.keys(gameState.players).find(
-      id => gameState.players[id].socketId === socket.id
+        id => gameState.players[id].socketId === socket.id
     );
     
     if (playerId) {
-      const player = gameState.players[playerId];
-      
-      // 如果玩家在房间中
-      if (player.room) {
-        const room = gameState.rooms[player.room];
+        const player = gameState.players[playerId];
         
-        // 如果是房主断线，解散房间
-        if (room && room.host === playerId) {
-          dissolveRoom(player.room);
-        } else if (room) {
-          // 普通玩家离开房间
-          leaveRoom(playerId);
+        // 如果玩家在房间中
+        if (player.room) {
+            const room = gameState.rooms[player.room];
+            
+            if (room) {
+                // 如果游戏正在进行中，结束游戏
+                if (room.gameStarted) {
+                                            // 通知房间内所有玩家游戏结束
+                        io.to(room.id).emit('game_over', {
+                            reason: '离开游戏',
+                            player: player.name
+                        });
+                    
+                    // 重置房间游戏状态
+                    room.gameStarted = false;
+                    room.questions = null;
+                    room.playerProgress = {};
+                    
+                    // 更新房间内所有玩家状态为"在房间中"
+                    room.players.forEach(pid => {
+                        if (pid !== playerId && gameState.players[pid]) {
+                            gameState.players[pid].status = PLAYER_STATUS.IN_ROOM;
+                        }
+                    });
+                }
+                
+                // 如果是房主断线，解散房间
+                if (room.host === playerId) {
+                    dissolveRoom(player.room);
+                } else {
+                    // 普通玩家离开房间
+                    leaveRoom(playerId);
+                }
+            }
         }
-      }
-      
-      // 标记玩家为离线状态，延迟删除以允许重连
-      player.socketId = null;
-      player.status = PLAYER_STATUS.OFFLINE;
-      
-      // 30秒后如果还没重连，则删除玩家记录
-      setTimeout(() => {
-        if (gameState.players[playerId] && gameState.players[playerId].socketId === null) {
-          delete gameState.players[playerId];
-          broadcastGameStateUpdate();
-          console.log(`玩家 ${playerId} 超时删除`);
-        }
-      }, 30000);
-      
-      broadcastGameStateUpdate();
+        
+        // 标记玩家为离线状态
+        player.socketId = null;
+        player.status = PLAYER_STATUS.OFFLINE;
+        
+        // 30秒后如果还没重连，则删除玩家记录
+        setTimeout(() => {
+            if (gameState.players[playerId] && gameState.players[playerId].socketId === null) {
+                delete gameState.players[playerId];
+                broadcastGameStateUpdate();
+                console.log(`玩家 ${playerId} 超时删除`);
+            }
+        }, 30000);
+        
+        broadcastGameStateUpdate();
     }
   });
 

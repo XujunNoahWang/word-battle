@@ -2,7 +2,7 @@
 class WordBattleClient {
     constructor() {
         this.socket = null;
-        this.playerId = null;
+        this.playerId = localStorage.getItem('word_battle_player_id') || null;
         this.currentRoom = null;
         this.gameState = {
             players: {},
@@ -99,6 +99,8 @@ class WordBattleClient {
         // 身份分配
         this.socket.on('identity_assigned', (playerId) => {
             this.playerId = playerId;
+            // 保存玩家ID到本地存储
+            localStorage.setItem('word_battle_player_id', playerId);
             
             // 获取当前玩家的名称
             const currentPlayer = this.gameState.players[playerId];
@@ -138,8 +140,8 @@ class WordBattleClient {
         });
 
         // 游戏结束
-        this.socket.on('game_over', () => {
-            this.showGameOver();
+        this.socket.on('game_over', (data) => {
+            this.showGameOver(data);
         });
 
         // 答题结果
@@ -230,9 +232,13 @@ class WordBattleClient {
 
     // 请求身份验证
     requestIdentity() {
-        // 获取会话中保存的名字
-        const savedName = sessionStorage.getItem('word_battle_player_name');
-        this.socket.emit('request_identity', { savedName });
+        const savedId = localStorage.getItem('word_battle_player_id');
+        const savedName = localStorage.getItem('word_battle_player_name');
+        
+        this.socket.emit('request_identity', { 
+            savedId,
+            savedName
+        });
     }
 
     // 显示/隐藏加载状态
@@ -242,8 +248,10 @@ class WordBattleClient {
     }
 
     // 更新玩家徽章
-    updatePlayerBadge(playerId) {
-        document.getElementById('playerBadge').textContent = playerId;
+    updatePlayerBadge(playerName) {
+        document.getElementById('playerBadge').textContent = playerName;
+        // 保存玩家名字到本地存储
+        localStorage.setItem('word_battle_player_name', playerName);
     }
 
     // 更新UI
@@ -620,14 +628,19 @@ class WordBattleClient {
     }
 
     // 显示游戏结束
-    showGameOver() {
+    showGameOver(data = {}) {
         const gameView = document.getElementById('gameView');
+        const reason = data.reason ? `<p class="game-over-reason">${data.player}${data.reason}</p>` : '';
+        
         gameView.innerHTML = `
             <div class="game-over">
                 <h2>游戏结束！</h2>
-                <button class="btn btn-primary" onclick="wordBattleClient.returnToRoom()">
-                    返回房间
-                </button>
+                ${reason}
+                <div class="return-room-button">
+                    <button class="btn btn-primary" onclick="wordBattleClient.returnToRoom()">
+                        返回房间
+                    </button>
+                </div>
             </div>
         `;
     }
@@ -710,18 +723,16 @@ class WordBattleClient {
         const newNameInput = document.getElementById('newNameInput');
         const newName = newNameInput.value.trim();
         
-        if (newName && newName.length <= 10) {
+        if (newName) {
             this.socket.emit('update_name', {
                 playerId: this.playerId,
                 newName: newName
             });
             
-            // 保存名字到会话存储中
-            sessionStorage.setItem('word_battle_player_name', newName);
+            // 保存新名字到本地存储
+            localStorage.setItem('word_battle_player_name', newName);
             
             this.hideEditNameModal();
-        } else {
-            this.showNotification('修改失败', '名字不能为空且不能超过10个字符', 'error');
         }
     }
 

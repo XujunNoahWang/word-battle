@@ -1181,6 +1181,25 @@ body {
     margin-bottom: var(--spacing-lg);
 }
 
+.game-over-reason {
+    font-size: 1.2em;
+    color: var(--text-secondary);
+    margin-bottom: var(--spacing-xl);
+    padding: var(--spacing-md);
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+    display: inline-block;
+}
+
+.return-room-button {
+    margin-top: var(--spacing-xl);
+}
+
+.return-room-button .btn {
+    font-size: 1.1em;
+    padding: var(--spacing-md) var(--spacing-xl);
+}
+
 .word-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
