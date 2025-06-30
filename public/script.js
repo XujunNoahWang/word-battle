@@ -105,7 +105,6 @@ class WordBattleClient {
             const displayName = currentPlayer ? currentPlayer.name : playerId;
             
             this.updatePlayerBadge(displayName);
-            this.showNotification('连接成功', `您的身份: ${displayName}`, 'success');
         });
 
         // 游戏状态更新
@@ -119,10 +118,10 @@ class WordBattleClient {
             const oldName = this.gameState.players[this.playerId]?.name;
             this.gameState.players = players;
             
-            // 如果当前玩家的名字发生变化，显示更新提示
+            // 如果当前玩家的名字发生变化，更新显示（不再显示提示框）
             const newName = players[this.playerId]?.name;
             if (oldName && newName && oldName !== newName) {
-                this.showNotification('名字已更新', `您的身份: ${newName}`, 'success');
+                this.updatePlayerBadge(newName);
             }
             
             this.updatePlayersDisplay();
