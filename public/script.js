@@ -509,26 +509,66 @@ class WordBattleClient {
 
     // 更新游戏视图
     updateGameView(data) {
-        const { word, images, progress } = data;
+        const { word, images } = data;
         
         // 更新单词显示
         document.querySelector('.word-display h2').textContent = word;
         
+        // 清除现有的播放按钮（如果有的话）
+        const existingButton = document.querySelector('.replay-button');
+        if (existingButton) {
+            existingButton.remove();
+        }
+        
+        // 添加播放按钮
+        const replayButton = document.createElement('button');
+        replayButton.className = 'replay-button';
+        replayButton.innerHTML = '▶';
+        replayButton.onclick = () => this.speakWord(word);
+        document.querySelector('.word-display').appendChild(replayButton);
+        
         // 更新图片网格
         const imageGrid = document.querySelector('.image-grid');
-        imageGrid.innerHTML = '';
+        imageGrid.innerHTML = images.map((image, index) => `
+            <div class="image-item" data-index="${index}">
+                <img src="/data/images/${image}.jpg" alt="选项${index + 1}">
+            </div>
+        `).join('');
         
-        images.forEach((image, index) => {
-            const imageItem = document.createElement('div');
-            imageItem.className = 'image-item';
-            imageItem.innerHTML = `<img src="/data/images/${image}.jpg" alt="选项${index + 1}">`;
-            imageItem.addEventListener('click', () => this.selectAnswer(image, imageItem));
-            imageGrid.appendChild(imageItem);
+        // 添加图片点击事件
+        const imageItems = document.querySelectorAll('.image-item');
+        let loadedImages = 0;
+        
+        imageItems.forEach((item, index) => {
+            const img = item.querySelector('img');
+            
+            img.onload = () => {
+                loadedImages++;
+                if (loadedImages === images.length) {
+                    // 所有图片加载完成后播放语音
+                    setTimeout(() => {
+                        this.speakWord(word);
+                    }, 300);
+                }
+            };
+            
+            // 添加错误处理
+            img.onerror = () => {
+                console.error(`Failed to load image: ${image}`);
+                item.innerHTML = `<div class="image-error">图片加载失败</div>`;
+            };
+            
+            item.onclick = (e) => this.selectAnswer(images[index], item);
         });
-        
-        // 更新进度（如果有的话）
-        if (progress) {
-            this.updateProgress(progress);
+    }
+
+    // 语音播报单词
+    speakWord(word) {
+        if ('speechSynthesis' in window) {
+            const utterance = new SpeechSynthesisUtterance(word);
+            utterance.lang = 'en-US';  // 使用美式英语
+            utterance.rate = 0.8;  // 稍微放慢语速
+            speechSynthesis.speak(utterance);
         }
     }
 
@@ -555,7 +595,7 @@ class WordBattleClient {
             const { isCorrect, progress } = data;
             
             // 添加反馈效果
-            const feedbackClass = isCorrect ? 'correct' : 'incorrect';
+            const feedbackClass = isCorrect ? 'correct' : 'wrong';
             imageElement.classList.add(feedbackClass);
             
             // 更新进度（如果有的话）
