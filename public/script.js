@@ -145,11 +145,7 @@ class WordBattleClient {
         // 答题结果
         this.socket.on('answer_result', (data) => {
             const { isCorrect, progress } = data;
-            this.showNotification(
-                isCorrect ? '答对了！' : '答错了！',
-                isCorrect ? '继续保持！' : '下次加油！',
-                isCorrect ? 'success' : 'error'
-            );
+            // 只更新进度，不显示提示框
             this.updateProgress(progress);
         });
 
