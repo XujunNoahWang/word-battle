@@ -248,39 +248,22 @@ io.on('connection', (socket) => {
   });
 
   // 处理玩家身份验证/分配
-  socket.on('request_identity', (existingPlayerId) => {
-    let playerId;
+  socket.on('request_identity', (data) => {
+    // 直接分配新身份
+    gameState.playerCounter++;
+    const playerId = `player${gameState.playerCounter}`;
     
-    if (existingPlayerId && gameState.players[existingPlayerId]) {
-      // 恢复现有身份
-      playerId = existingPlayerId;
-      gameState.players[playerId].socketId = socket.id;
-      gameState.players[playerId].status = PLAYER_STATUS.IDLE;
-      console.log(`玩家重新连接: ${playerId}`);
-    } else if (existingPlayerId) {
-      // 身份存在于本地存储但服务器中不存在，重新创建
-      playerId = existingPlayerId;
-      gameState.players[playerId] = {
-        id: playerId,
-        socketId: socket.id,
-        name: playerId,
-        status: PLAYER_STATUS.IDLE,
-        room: null
-      };
-      console.log(`恢复玩家身份: ${playerId}`);
-    } else {
-      // 分配新身份
-      gameState.playerCounter++;
-      playerId = `player${gameState.playerCounter}`;
-      gameState.players[playerId] = {
-        id: playerId,
-        socketId: socket.id,
-        name: playerId,
-        status: PLAYER_STATUS.IDLE,
-        room: null
-      };
-      console.log(`新玩家分配身份: ${playerId}`);
-    }
+    // 使用保存的名字或默认使用playerId作为名字
+    const playerName = (data && data.savedName) ? data.savedName : playerId;
+    
+    gameState.players[playerId] = {
+      id: playerId,
+      socketId: socket.id,
+      name: playerName,
+      status: PLAYER_STATUS.IDLE,
+      room: null
+    };
+    console.log(`新玩家分配身份: ${playerId}, 名字: ${playerName}`);
 
     // 发送身份给客户端
     socket.emit('identity_assigned', playerId);
@@ -540,6 +523,12 @@ io.on('connection', (socket) => {
     const room = gameState.rooms[player.room];
     if (!room) return;
 
+    // 如果是房主退出，直接解散房间
+    if (room.host === playerId) {
+      dissolveRoom(room.id);
+      return;
+    }
+
     // 从房间移除玩家
     room.players = room.players.filter(id => id !== playerId);
     
@@ -553,8 +542,8 @@ io.on('connection', (socket) => {
       playerSocket.leave(room.id);
     }
 
-    // 如果房间空了或房主离开，解散房间
-    if (room.players.length === 0 || room.host === playerId) {
+    // 如果房间空了，解散房间
+    if (room.players.length === 0) {
       dissolveRoom(room.id);
     }
     
@@ -566,6 +555,13 @@ io.on('connection', (socket) => {
     const room = gameState.rooms[roomId];
     if (!room) return;
 
+    // 保存房间信息用于广播
+    const roomInfo = {
+      message: '房间已解散',
+      roomName: room.name,
+      roomId: room.id
+    };
+
     // 将房间内所有玩家踢出
     room.players.forEach(playerId => {
       const player = gameState.players[playerId];
@@ -573,21 +569,20 @@ io.on('connection', (socket) => {
         player.status = PLAYER_STATUS.IDLE;
         player.room = null;
         
+        // 获取玩家的socket并发送解散消息
         const playerSocket = io.sockets.sockets.get(player.socketId);
         if (playerSocket) {
           playerSocket.leave(roomId);
+          playerSocket.emit('room_dissolved', roomInfo);
         }
       }
     });
 
-    // 广播房间解散消息
-    io.to(roomId).emit('room_dissolved', {
-      message: '房间已解散',
-      roomName: room.name
-    });
-
     // 删除房间
     delete gameState.rooms[roomId];
+    
+    // 广播游戏状态更新
+    broadcastGameStateUpdate();
     
     console.log(`房间解散: ${room.name}`);
   }

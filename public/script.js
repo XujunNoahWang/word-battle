@@ -99,7 +99,6 @@ class WordBattleClient {
         // 身份分配
         this.socket.on('identity_assigned', (playerId) => {
             this.playerId = playerId;
-            localStorage.setItem('word_battle_player_id', playerId);
             
             // 获取当前玩家的名称
             const currentPlayer = this.gameState.players[playerId];
@@ -163,9 +162,30 @@ class WordBattleClient {
 
         // 房间解散
         this.socket.on('room_dissolved', (data) => {
-            this.showNotification('房间解散', data.message, 'warning');
+            // 立即更新游戏状态
+            if (this.gameState.rooms[this.currentRoom]) {
+                delete this.gameState.rooms[this.currentRoom];
+            }
+            
+            // 更新当前玩家状态
+            if (this.gameState.players[this.playerId]) {
+                this.gameState.players[this.playerId].status = 'idle';
+                this.gameState.players[this.playerId].room = null;
+            }
+
             this.currentRoom = null;
-            this.showLobby();
+
+            // 强制更新UI
+            document.getElementById('lobby').classList.remove('hidden');
+            document.getElementById('roomView').classList.add('hidden');
+            document.getElementById('gameView').classList.add('hidden');
+
+            // 更新房间和玩家列表显示
+            this.updateRoomsDisplay();
+            this.updatePlayersDisplay();
+            
+            // 显示通知
+            this.showNotification('房间解散', `${data.roomName}房间已解散`, 'warning');
         });
 
         // 连接错误
@@ -210,8 +230,9 @@ class WordBattleClient {
 
     // 请求身份验证
     requestIdentity() {
-        const existingPlayerId = localStorage.getItem('word_battle_player_id');
-        this.socket.emit('request_identity', existingPlayerId);
+        // 获取会话中保存的名字
+        const savedName = sessionStorage.getItem('word_battle_player_name');
+        this.socket.emit('request_identity', { savedName });
     }
 
     // 显示/隐藏加载状态
@@ -589,17 +610,21 @@ class WordBattleClient {
 
     // 更新用户名
     updatePlayerName() {
-        const input = document.getElementById('newNameInput');
-        const newName = input.value.trim();
+        const newNameInput = document.getElementById('newNameInput');
+        const newName = newNameInput.value.trim();
         
-        if (newName && newName.length <= 20) {
+        if (newName && newName.length <= 10) {
             this.socket.emit('update_name', {
                 playerId: this.playerId,
                 newName: newName
             });
+            
+            // 保存名字到会话存储中
+            sessionStorage.setItem('word_battle_player_name', newName);
+            
             this.hideEditNameModal();
         } else {
-            this.showNotification('错误', '用户名不能为空且不能超过20个字符', 'error');
+            this.showNotification('修改失败', '名字不能为空且不能超过10个字符', 'error');
         }
     }
 
@@ -734,15 +759,15 @@ class WordBattleClient {
         allPlayersHtml += '</table></div>';
         resultsDiv.innerHTML += allPlayersHtml;
         
-        // 添加重新开始按钮
-        const restartButton = document.createElement('button');
-        restartButton.textContent = '返回大厅';
-        restartButton.className = 'restart-button';
-        restartButton.onclick = () => {
-            this.showRoom();
+        // 添加返回房间按钮
+        const returnButton = document.createElement('button');
+        returnButton.textContent = '返回房间';
+        returnButton.className = 'restart-button';
+        returnButton.onclick = () => {
+            this.returnToRoom();  // 使用已有的returnToRoom方法
             this.socket.emit('leave_game');
         };
-        resultsDiv.appendChild(restartButton);
+        resultsDiv.appendChild(returnButton);
     }
 }
 
