@@ -875,6 +875,20 @@ body {
     padding: 1rem;
 }
 
+.word-list-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+}
+
+.word-list-header h3 {
+    margin: 0;
+    font-size: var(--font-size-lg);
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
 .word-list {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));

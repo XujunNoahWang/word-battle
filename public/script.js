@@ -949,6 +949,17 @@ class WordBattleClient {
                 <button onclick="wordBattleClient.deleteWord('${word}')">×</button>
             </div>
         `).join('');
+        
+        // 更新单词数量显示
+        this.updateWordCount(words.length);
+    }
+
+    // 更新单词数量显示
+    updateWordCount(count) {
+        const wordCountElement = document.getElementById('wordCount');
+        if (wordCountElement) {
+            wordCountElement.textContent = count;
+        }
     }
 
     // 更新游戏进度显示
