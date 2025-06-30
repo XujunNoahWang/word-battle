@@ -5,6 +5,43 @@ const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
 const axios = require('axios');
+const os = require('os');
+
+// 获取本机IP地址
+function getLocalIPs() {
+    const interfaces = os.networkInterfaces();
+    const ips = [];
+    let wlanIP = null;  // 存储无线网卡IP
+    
+    for (const name of Object.keys(interfaces)) {
+        // 优先检查无线网卡
+        if (name.toLowerCase().includes('wlan')) {
+            for (const iface of interfaces[name]) {
+                if (iface.family === 'IPv4' && !iface.internal) {
+                    wlanIP = iface.address;
+                    break;
+                }
+            }
+        }
+        
+        // 继续收集其他网卡的IP
+        for (const iface of interfaces[name]) {
+            if (iface.family === 'IPv4' && !iface.internal) {
+                // 排除VMware的虚拟网卡IP
+                if (!name.toLowerCase().includes('vmware')) {
+                    ips.push(iface.address);
+                }
+            }
+        }
+    }
+    
+    // 如果找到无线网卡IP，将其放在数组第一位
+    if (wlanIP) {
+        ips.unshift(wlanIP);
+    }
+    
+    return ips;
+}
 
 const app = express();
 const server = http.createServer(app);
@@ -671,13 +708,15 @@ io.on('connection', (socket) => {
   }
 });
 
-// 启动服务器
+// 设置服务器监听
 const PORT = 3000;
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`前端服务器运行在端口 ${PORT}`);
+  const ips = getLocalIPs();
+  const mainIP = ips.length > 0 ? ips[0] : 'localhost';
+  
   console.log(`WebSocket服务器运行在端口 ${PORT}`);
   console.log('\n🎮 Word Battle 已启动！');
   console.log(`📍 本地访问: http://localhost:${PORT}`);
-  console.log('🌐 局域网访问: http://[你的IP]:${PORT}');
+  console.log(`🌐 局域网访问: http://${mainIP}:${PORT}`);
   console.log('服务器已准备好接受连接...\n');
 });
