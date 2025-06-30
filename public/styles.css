@@ -324,21 +324,50 @@ body {
     color: var(--text-primary);
 }
 
+/* 玩家状态样式 */
 .player-status {
-    padding: var(--spacing-xs) var(--spacing-sm);
-    border-radius: var(--radius-sm);
-    font-size: var(--font-size-xs);
-    font-weight: 500;
-}
-
-.player-status.idle {
-    background: var(--success-color);
-    color: var(--text-white);
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    margin-left: 8px;
 }
 
 .player-status.in_room {
-    background: var(--warning-color);
-    color: var(--text-white);
+    background-color: #4CAF50;
+    color: white;
+}
+
+.player-status.in_game {
+    background-color: #2196F3;
+    color: white;
+}
+
+.player-status.in_result {
+    background-color: #FF9800;
+    color: white;
+}
+
+/* 开始游戏按钮禁用状态 */
+#startGameBtn:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+}
+
+/* 房间玩家列表样式 */
+.room-player {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 16px;
+    border-bottom: 1px solid #eee;
+}
+
+.room-player:last-child {
+    border-bottom: none;
+}
+
+.player-name {
+    font-weight: 500;
 }
 
 .room-item {

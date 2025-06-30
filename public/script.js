@@ -226,6 +226,11 @@ class WordBattleClient {
         this.socket.on('all_players_completed', (results) => {
             this.showAllPlayersResults(results);
         });
+
+        // 游戏开始错误
+        this.socket.on('game_start_error', (data) => {
+            this.showNotification('无法开始游戏', data.message, 'error');
+        });
     }
 
     // 请求身份验证
@@ -349,56 +354,66 @@ class WordBattleClient {
 
     // 更新房间视图
     updateRoomView() {
-        if (!this.currentRoom) return;
+        if (!this.currentRoom || !this.gameState.rooms[this.currentRoom]) return;
 
         const room = this.gameState.rooms[this.currentRoom];
-        if (!room) return;
+        const currentPlayer = this.gameState.players[this.playerId];
+        const isHost = room.host === this.playerId;
 
-        const roomPlayersList = document.getElementById('roomPlayersList');
-        const startGameBtn = document.getElementById('startGameBtn');
-        const roomTitle = document.getElementById('roomTitle');
-        const roomStatus = document.querySelector('.room-status');
-        const roomHostName = document.getElementById('roomHostName');
-
-        // 更新房间标题和状态
-        const hostPlayer = this.gameState.players[room.host];
-        roomTitle.textContent = `${hostPlayer.name}的房间`;
-        roomHostName.textContent = hostPlayer.name;
-        roomStatus.textContent = room.gameStarted ? '游戏进行中' : '等待玩家加入...';
-
-        // 显示/隐藏开始游戏按钮
-        if (room.host === this.playerId && !room.gameStarted) {
-            startGameBtn.classList.remove('hidden');
-        } else {
-            startGameBtn.classList.add('hidden');
-        }
+        // 更新房间标题
+        document.getElementById('roomTitle').textContent = `${this.gameState.players[room.host].name}的房间`;
+        document.getElementById('roomHostName').textContent = this.gameState.players[room.host].name;
 
         // 更新玩家列表
-        roomPlayersList.innerHTML = room.players.map(playerId => {
+        const playersList = document.getElementById('roomPlayersList');
+        playersList.innerHTML = room.players.map(playerId => {
             const player = this.gameState.players[playerId];
-            const isHost = room.host === playerId;
-            const isCurrentPlayer = playerId === this.playerId;
-            const statusClass = isHost ? 'host' : 'ready';
-            const statusText = isHost ? '房主' : '准备中';
-            const initial = player.name.charAt(0).toUpperCase();
-
+            let statusText = '';
+            
+            // 根据玩家状态显示不同的文本
+            switch(player.status) {
+                case 'in_room':
+                    statusText = '准备中';
+                    break;
+                case 'in_game':
+                    statusText = '游戏中';
+                    break;
+                case 'in_result':
+                    statusText = '查看结果中';
+                    break;
+                default:
+                    statusText = '未知状态';
+            }
+            
             return `
-                <div class="room-player-item">
-                    <div class="room-player-info">
-                        <div class="room-player-avatar">
-                            ${initial}
-                        </div>
-                        <span class="room-player-name">
-                            ${player.name}
-                            ${isCurrentPlayer ? ' (你)' : ''}
-                        </span>
-                    </div>
-                    <span class="room-player-status ${statusClass}">
-                        ${statusText}
-                    </span>
+                <div class="room-player">
+                    <span class="player-name">${player.name}</span>
+                    <span class="player-status ${player.status}">${statusText}</span>
                 </div>
             `;
         }).join('');
+
+        // 更新开始游戏按钮
+        const startGameBtn = document.getElementById('startGameBtn');
+        if (startGameBtn) {
+            if (isHost) {
+                startGameBtn.classList.remove('hidden');
+                // 检查是否所有玩家都已准备
+                const allReady = room.players.every(pid => 
+                    this.gameState.players[pid].status === 'in_room'
+                );
+                
+                if (allReady) {
+                    startGameBtn.disabled = false;
+                    startGameBtn.title = '开始新一轮游戏';
+                } else {
+                    startGameBtn.disabled = true;
+                    startGameBtn.title = '等待所有玩家准备';
+                }
+            } else {
+                startGameBtn.classList.add('hidden');
+            }
+        }
     }
 
     // 创建房间
@@ -537,6 +552,12 @@ class WordBattleClient {
 
     // 返回房间
     returnToRoom() {
+        // 通知服务器玩家返回房间
+        this.socket.emit('return_to_room', {
+            playerId: this.playerId,
+            roomId: this.currentRoom
+        });
+
         // 重置游戏视图
         const gameView = document.getElementById('gameView');
         gameView.innerHTML = `
@@ -554,12 +575,6 @@ class WordBattleClient {
         
         // 返回房间视图
         this.showRoom();
-        
-        // 显示开始游戏按钮
-        const startGameBtn = document.getElementById('startGameBtn');
-        if (startGameBtn) {
-            startGameBtn.classList.remove('hidden');
-        }
     }
 
     // 显示通知
@@ -721,6 +736,12 @@ class WordBattleClient {
 
     // 显示游戏结果
     showGameResults(results) {
+        // 通知服务器玩家已完成游戏
+        this.socket.emit('game_completed', {
+            playerId: this.playerId,
+            roomId: this.currentRoom
+        });
+
         const gameView = document.getElementById('gameView');
         gameView.innerHTML = `
             <div class="results-container">

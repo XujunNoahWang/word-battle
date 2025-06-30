@@ -192,9 +192,11 @@ const wordlist = JSON.parse(fs.readFileSync('data/wordlist.json', 'utf8')).words
 
 // 玩家状态枚举
 const PLAYER_STATUS = {
-  IDLE: 'idle',       // 大厅中
-  IN_ROOM: 'in_room', // 房间中
-  OFFLINE: 'offline'  // 离线状态
+  IDLE: 'idle',           // 空闲（在大厅中）
+  IN_ROOM: 'in_room',     // 在房间中（准备状态）
+  IN_GAME: 'in_game',     // 在游戏中
+  IN_RESULT: 'in_result', // 在结果页面中
+  OFFLINE: 'offline'      // 离线
 };
 
 // 游戏状态管理
@@ -376,13 +378,34 @@ io.on('connection', (socket) => {
     
     if (!room || room.host !== playerId) return;
 
+    // 检查是否所有玩家都已准备（在房间中）
+    const allReady = room.players.every(pid => {
+      const player = gameState.players[pid];
+      return player && player.status === PLAYER_STATUS.IN_ROOM;
+    });
+
+    if (!allReady) {
+      // 如果有玩家未准备好，发送错误消息
+      const playerSocket = io.sockets.sockets.get(socket.id);
+      if (playerSocket) {
+        playerSocket.emit('game_start_error', {
+          message: '有玩家尚未准备好，请等待所有玩家返回房间'
+        });
+      }
+      return;
+    }
+
     // 重置房间游戏状态
     room.gameStarted = true;
     room.questions = generateQuestions();
     room.playerProgress = {};
     
-    // 初始化每个玩家的进度
+    // 初始化每个玩家的进度并更新状态
     room.players.forEach(pid => {
+      const player = gameState.players[pid];
+      if (player) {
+        player.status = PLAYER_STATUS.IN_GAME;
+      }
       room.playerProgress[pid] = {
         currentQuestion: 0,
         correctAnswers: 0,
@@ -471,6 +494,53 @@ io.on('connection', (socket) => {
       });
       socket.emit('next_question', room.questions[progress.currentQuestion]);
     }
+  });
+
+  // 处理游戏完成
+  socket.on('game_completed', (data) => {
+    const { playerId, roomId } = data;
+    const room = gameState.rooms[roomId];
+    const player = gameState.players[playerId];
+    
+    if (!room || !player) return;
+
+    // 更新玩家状态为"在结果页面中"
+    player.status = PLAYER_STATUS.IN_RESULT;
+    
+    // 更新玩家进度
+    if (room.playerProgress[playerId]) {
+      room.playerProgress[playerId].endTime = Date.now();
+    }
+
+    // 检查是否所有玩家都完成了
+    const allCompleted = room.players.every(pid => {
+      const progress = room.playerProgress[pid];
+      return progress && progress.endTime;
+    });
+
+    if (allCompleted) {
+      // 计算并发送结果
+      const results = calculateResults(room);
+      io.to(roomId).emit('all_players_completed', results);
+    }
+
+    // 广播状态更新
+    broadcastGameStateUpdate();
+  });
+
+  // 处理玩家返回房间
+  socket.on('return_to_room', (data) => {
+    const { playerId, roomId } = data;
+    const player = gameState.players[playerId];
+    const room = gameState.rooms[roomId];
+
+    if (!player || !room) return;
+
+    // 更新玩家状态为"在房间中"
+    player.status = PLAYER_STATUS.IN_ROOM;
+
+    // 广播状态更新
+    broadcastGameStateUpdate();
   });
 
   // 断线处理
