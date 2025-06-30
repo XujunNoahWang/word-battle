@@ -509,26 +509,73 @@ class WordBattleClient {
 
     // 更新游戏视图
     updateGameView(data) {
-        const { word, images } = data;
+        const { word, images, progress } = data;
         
-        // 显示单词
-        document.getElementById('currentWord').textContent = word;
+        // 更新单词显示
+        document.querySelector('.word-display h2').textContent = word;
         
-        // 显示图片选项
+        // 更新图片网格
         const imageGrid = document.querySelector('.image-grid');
-        imageGrid.innerHTML = images.map(image => `
-            <div class="image-item" onclick="wordBattleClient.selectAnswer('${image}')">
-                <img src="/data/images/${image}.jpg" alt="选项">
-            </div>
-        `).join('');
+        imageGrid.innerHTML = '';
+        
+        images.forEach((image, index) => {
+            const imageItem = document.createElement('div');
+            imageItem.className = 'image-item';
+            imageItem.innerHTML = `<img src="/data/images/${image}.jpg" alt="选项${index + 1}">`;
+            imageItem.addEventListener('click', () => this.selectAnswer(image, imageItem));
+            imageGrid.appendChild(imageItem);
+        });
+        
+        // 更新进度（如果有的话）
+        if (progress) {
+            this.updateProgress(progress);
+        }
     }
 
-    // 处理答题选择
-    selectAnswer(selectedImage) {
+    // 选择答案
+    async selectAnswer(selectedImage, imageElement) {
+        // 防止重复点击
+        if (imageElement.classList.contains('correct') || imageElement.classList.contains('incorrect')) {
+            return;
+        }
+        
+        // 禁用所有图片点击
+        const allImages = document.querySelectorAll('.image-item');
+        allImages.forEach(item => item.style.pointerEvents = 'none');
+        
+        // 发送答案到服务器
         this.socket.emit('answer_selected', {
             playerId: this.playerId,
             roomId: this.currentRoom,
             selectedImage: selectedImage
+        });
+
+        // 监听一次性答题结果事件
+        this.socket.once('answer_result', (data) => {
+            const { isCorrect, progress } = data;
+            
+            // 添加反馈效果
+            const feedbackClass = isCorrect ? 'correct' : 'incorrect';
+            imageElement.classList.add(feedbackClass);
+            
+            // 更新进度（如果有的话）
+            if (progress) {
+                this.updateProgress(progress);
+            }
+            
+            // 0.5秒后移除反馈效果并请求下一题
+            setTimeout(() => {
+                // 移除反馈效果
+                imageElement.classList.remove(feedbackClass);
+                // 恢复图片点击
+                allImages.forEach(item => item.style.pointerEvents = 'auto');
+                
+                // 请求下一题
+                this.socket.emit('request_next_question', {
+                    playerId: this.playerId,
+                    roomId: this.currentRoom
+                });
+            }, 500);
         });
     }
 
@@ -724,9 +771,21 @@ class WordBattleClient {
 
     // 更新游戏进度显示
     updateProgress(progress) {
-        document.getElementById('current-progress').textContent = progress.current;
-        document.getElementById('total-questions').textContent = progress.total;
-        document.getElementById('correct-answers').textContent = progress.correct;
+        if (!progress) return;  // 如果progress为undefined，直接返回
+        
+        const currentProgress = document.getElementById('current-progress');
+        const totalQuestions = document.getElementById('total-questions');
+        const correctAnswers = document.getElementById('correct-answers');
+        
+        if (currentProgress && progress.hasOwnProperty('current')) {
+            currentProgress.textContent = progress.current;
+        }
+        if (totalQuestions && progress.hasOwnProperty('total')) {
+            totalQuestions.textContent = progress.total;
+        }
+        if (correctAnswers && progress.hasOwnProperty('correct')) {
+            correctAnswers.textContent = progress.correct;
+        }
     }
 
     // 显示游戏结果
@@ -753,8 +812,25 @@ class WordBattleClient {
 
     // 显示所有玩家的最终成绩
     showAllPlayersResults(results) {
-        const resultsDiv = document.querySelector('.results-container');
+        // 获取或创建结果容器
+        let resultsContainer = document.querySelector('.results-container');
+        if (!resultsContainer) {
+            resultsContainer = document.createElement('div');
+            resultsContainer.className = 'results-container';
+            document.getElementById('gameView').appendChild(resultsContainer);
+        }
+
+        // 移除可能已存在的所有玩家成绩和返回按钮
+        const existingResults = resultsContainer.querySelector('.all-players-results');
+        if (existingResults) {
+            existingResults.remove();
+        }
+        const existingButton = resultsContainer.querySelector('.restart-button');
+        if (existingButton) {
+            existingButton.remove();
+        }
         
+        // 创建所有玩家成绩表格
         let allPlayersHtml = '<div class="all-players-results"><h3>所有玩家成绩</h3><table>';
         allPlayersHtml += '<tr><th>玩家</th><th>用时(秒)</th><th>正确率</th><th>答对题数</th></tr>';
         
@@ -773,17 +849,17 @@ class WordBattleClient {
         });
         
         allPlayersHtml += '</table></div>';
-        resultsDiv.innerHTML += allPlayersHtml;
+        resultsContainer.insertAdjacentHTML('beforeend', allPlayersHtml);
         
         // 添加返回房间按钮
         const returnButton = document.createElement('button');
         returnButton.textContent = '返回房间';
         returnButton.className = 'restart-button';
         returnButton.onclick = () => {
-            this.returnToRoom();  // 使用已有的returnToRoom方法
+            this.returnToRoom();
             this.socket.emit('leave_game');
         };
-        resultsDiv.appendChild(returnButton);
+        resultsContainer.appendChild(returnButton);
     }
 }
 

@@ -438,6 +438,29 @@ io.on('connection', (socket) => {
     if (isCorrect) {
       progress.correctAnswers++;
     }
+    
+    // 发送答题结果，但不自动发送下一题
+    socket.emit('answer_result', {
+      isCorrect,
+      progress: {
+        current: progress.currentQuestion + 1,
+        total: room.questions.length,
+        correct: progress.correctAnswers
+      }
+    });
+  });
+
+  // 处理请求下一题
+  socket.on('request_next_question', (data) => {
+    const { playerId, roomId } = data;
+    const room = gameState.rooms[roomId];
+    
+    if (!room || !room.gameStarted) return;
+
+    const progress = room.playerProgress[playerId];
+    if (!progress) return;
+
+    // 更新题目计数
     progress.currentQuestion++;
     
     // 检查是否完成所有题目
@@ -454,46 +477,41 @@ io.on('connection', (socket) => {
         totalQuestions: room.questions.length
       });
       
+      // 更新玩家状态
+      const player = gameState.players[playerId];
+      if (player) {
+        player.status = PLAYER_STATUS.IN_RESULT;
+      }
+      
       // 检查是否所有玩家都完成了游戏
       const allCompleted = room.players.every(pid => {
-        const p = room.playerProgress[pid];
-        return p && p.endTime;
+        const playerProgress = room.playerProgress[pid];
+        return playerProgress && playerProgress.endTime;
       });
       
       if (allCompleted) {
-        // 发送所有玩家的成绩
+        // 准备所有玩家的结果
         const results = {};
         room.players.forEach(pid => {
-          const p = room.playerProgress[pid];
+          const playerProgress = room.playerProgress[pid];
           const player = gameState.players[pid];
           results[pid] = {
             name: player.name,
-            totalTime: (p.endTime - p.startTime) / 1000,
-            accuracy: (p.correctAnswers / room.questions.length) * 100,
-            correctAnswers: p.correctAnswers
+            totalTime: (playerProgress.endTime - playerProgress.startTime) / 1000,
+            accuracy: (playerProgress.correctAnswers / room.questions.length) * 100,
+            correctAnswers: playerProgress.correctAnswers
           };
         });
         
+        // 发送所有玩家的结果
         io.to(roomId).emit('all_players_completed', results);
-        
-        // 重置房间状态
-        room.gameStarted = false;
-        room.questions = null;
-        room.playerProgress = {};
-        broadcastGameStateUpdate();
       }
     } else {
-      // 发送答题结果和下一题
-      socket.emit('answer_result', { 
-        isCorrect,
-        progress: {
-          current: progress.currentQuestion,
-          total: room.questions.length,
-          correct: progress.correctAnswers
-        }
-      });
+      // 发送下一题
       socket.emit('next_question', room.questions[progress.currentQuestion]);
     }
+    
+    broadcastGameStateUpdate();
   });
 
   // 处理游戏完成
@@ -503,28 +521,39 @@ io.on('connection', (socket) => {
     const player = gameState.players[playerId];
     
     if (!room || !player) return;
-
-    // 更新玩家状态为"在结果页面中"
+    
+    // 更新玩家状态
     player.status = PLAYER_STATUS.IN_RESULT;
     
-    // 更新玩家进度
-    if (room.playerProgress[playerId]) {
-      room.playerProgress[playerId].endTime = Date.now();
-    }
-
-    // 检查是否所有玩家都完成了
+    // 检查是否所有玩家都完成了游戏
     const allCompleted = room.players.every(pid => {
-      const progress = room.playerProgress[pid];
-      return progress && progress.endTime;
+      const playerProgress = room.playerProgress[pid];
+      return playerProgress && playerProgress.endTime;
     });
-
+    
     if (allCompleted) {
-      // 计算并发送结果
-      const results = calculateResults(room);
+      // 准备所有玩家的结果
+      const results = {};
+      room.players.forEach(pid => {
+        const playerProgress = room.playerProgress[pid];
+        const player = gameState.players[pid];
+        results[pid] = {
+          name: player.name,
+          totalTime: (playerProgress.endTime - playerProgress.startTime) / 1000,
+          accuracy: (playerProgress.correctAnswers / room.questions.length) * 100,
+          correctAnswers: playerProgress.correctAnswers
+        };
+      });
+      
+      // 发送所有玩家的结果
       io.to(roomId).emit('all_players_completed', results);
+      
+      // 重置房间状态
+      room.gameStarted = false;
+      room.questions = null;
+      room.playerProgress = {};
     }
-
-    // 广播状态更新
+    
     broadcastGameStateUpdate();
   });
 
@@ -677,7 +706,7 @@ server.listen(PORT, '0.0.0.0', () => {
   console.log(`前端服务器运行在端口 ${PORT}`);
   console.log(`WebSocket服务器运行在端口 ${PORT}`);
   console.log('\n🎮 Word Battle 已启动！');
-  console.log(`📍 本地访问: http://localhost:${PORT}`);
-  console.log('🌐 局域网访问: http://[你的IP]:${PORT}');
-  console.log('服务器已准备好接受连接...\n');
+  // console.log(`📍 本地访问: http://localhost:${PORT}`);
+  // console.log('🌐 局域网访问: http://[你的IP]:${PORT}');
+  // console.log('服务器已准备好接受连接...\n');
 });
