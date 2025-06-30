@@ -337,6 +337,11 @@ body {
     color: white;
 }
 
+.player-status.preloading {
+    background-color: #FF9800;
+    color: white;
+}
+
 .player-status.in_game {
     background-color: #2196F3;
     color: white;
@@ -1367,4 +1372,178 @@ body {
     font-size: 14px;
     text-align: center;
     padding: 20px;
+}
+
+/* 预加载页面样式 */
+.preload-view {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--bg-primary);
+    z-index: 1000;
+}
+
+.preload-content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: var(--spacing-xl);
+}
+
+.preload-container {
+    max-width: 600px;
+    width: 100%;
+    text-align: center;
+}
+
+.preload-header {
+    margin-bottom: var(--spacing-xxl);
+}
+
+.preload-header h2 {
+    font-size: var(--font-size-xl);
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: var(--spacing-sm);
+}
+
+.preload-subtitle {
+    color: var(--text-secondary);
+    font-size: var(--font-size-md);
+}
+
+.preload-players {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-lg);
+    margin-bottom: var(--spacing-xxl);
+}
+
+.preload-player {
+    background: var(--bg-secondary);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-lg);
+    transition: all 0.3s ease;
+}
+
+.preload-player.completed {
+    background: rgba(52, 199, 89, 0.1);
+    border: 2px solid var(--success-color);
+}
+
+.preload-player-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--spacing-md);
+}
+
+.preload-player-name {
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: var(--font-size-lg);
+}
+
+.preload-player-status {
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.preload-player-status.completed {
+    color: var(--success-color);
+}
+
+.preload-progress-bar {
+    width: 100%;
+    height: 8px;
+    background: var(--border-color);
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+}
+
+.preload-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary-color), var(--primary-hover));
+    border-radius: 4px;
+    transition: width 0.3s ease;
+    position: relative;
+}
+
+.preload-progress-fill.completed {
+    background: linear-gradient(90deg, var(--success-color), #28a745);
+}
+
+.preload-progress-fill::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+    animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+
+.preload-progress-text {
+    margin-top: var(--spacing-sm);
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.preload-footer {
+    border-top: 1px solid var(--border-color);
+    padding-top: var(--spacing-lg);
+}
+
+.preload-info {
+    color: var(--text-secondary);
+    font-size: var(--font-size-sm);
+}
+
+/* 预加载动画效果 */
+.preload-container {
+    animation: preloadFadeIn 0.5s ease-out;
+}
+
+@keyframes preloadFadeIn {
+    from { 
+        opacity: 0; 
+        transform: translateY(20px); 
+    }
+    to { 
+        opacity: 1; 
+        transform: translateY(0); 
+    }
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .preload-content {
+        padding: var(--spacing-lg);
+    }
+    
+    .preload-container {
+        max-width: 100%;
+    }
+    
+    .preload-player-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--spacing-xs);
+    }
+    
+    .preload-header h2 {
+        font-size: var(--font-size-lg);
+    }
 } 

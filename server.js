@@ -194,6 +194,7 @@ const wordlist = JSON.parse(fs.readFileSync('data/wordlist.json', 'utf8')).words
 const PLAYER_STATUS = {
   IDLE: 'idle',           // 空闲（在大厅中）
   IN_ROOM: 'in_room',     // 在房间中（准备状态）
+  PRELOADING: 'preloading', // 预加载中
   IN_GAME: 'in_game',     // 在游戏中
   IN_RESULT: 'in_result', // 在结果页面中
   OFFLINE: 'offline'      // 离线
@@ -436,29 +437,44 @@ io.on('connection', (socket) => {
       return;
     }
 
-    // 重置房间游戏状态
-    room.gameStarted = true;
+    // 生成题目
     room.questions = generateQuestions(roomId);
-    room.playerProgress = {};
     
-    // 初始化每个玩家的进度并更新状态
+    // 收集所有需要预加载的图片
+    const allImages = new Set();
+    room.questions.forEach(question => {
+      question.images.forEach(image => {
+        allImages.add(image);
+      });
+    });
+    
+    // 初始化预加载状态
+    room.preloadStatus = {};
     room.players.forEach(pid => {
       const player = gameState.players[pid];
       if (player) {
-        player.status = PLAYER_STATUS.IN_GAME;
+        player.status = PLAYER_STATUS.PRELOADING;
       }
-      room.playerProgress[pid] = {
-        currentQuestion: 0,
-        correctAnswers: 0,
-        startTime: Date.now(),
-        endTime: null
+      room.preloadStatus[pid] = {
+        progress: 0,
+        totalImages: allImages.size,
+        loadedImages: 0,
+        completed: false
       };
     });
     
-    // 向房间内所有玩家发送游戏开始消息
-    io.to(roomId).emit('game_started', room.questions[0]);
+    // 发送预加载开始消息
+    io.to(roomId).emit('preload_started', {
+      images: Array.from(allImages),
+      totalImages: allImages.size,
+      players: room.players.map(pid => ({
+        id: pid,
+        name: gameState.players[pid].name,
+        progress: 0
+      }))
+    });
     
-    console.log(`游戏开始: ${room.name}`);
+    console.log(`预加载开始: ${room.name}, 需要加载 ${allImages.size} 张图片`);
     broadcastGameStateUpdate();
   });
 
@@ -489,6 +505,68 @@ io.on('connection', (socket) => {
         correct: progress.correctAnswers
       }
     });
+  });
+
+  // 处理预加载进度更新
+  socket.on('preload_progress', (data) => {
+    const { playerId, roomId, loadedImages, totalImages } = data;
+    const room = gameState.rooms[roomId];
+    
+    if (!room || !room.preloadStatus) return;
+    
+    const playerPreloadStatus = room.preloadStatus[playerId];
+    if (!playerPreloadStatus) return;
+    
+    // 更新玩家预加载进度
+    playerPreloadStatus.loadedImages = loadedImages;
+    playerPreloadStatus.progress = Math.round((loadedImages / totalImages) * 100);
+    playerPreloadStatus.completed = loadedImages >= totalImages;
+    
+    // 广播预加载进度给房间内所有玩家
+    const playersProgress = room.players.map(pid => ({
+      id: pid,
+      name: gameState.players[pid].name,
+      progress: room.preloadStatus[pid].progress,
+      completed: room.preloadStatus[pid].completed
+    }));
+    
+    io.to(roomId).emit('preload_progress_update', {
+      players: playersProgress
+    });
+    
+    // 检查是否所有玩家都完成了预加载
+    const allCompleted = room.players.every(pid => 
+      room.preloadStatus[pid].completed
+    );
+    
+    if (allCompleted) {
+      // 所有玩家预加载完成，开始游戏
+      room.gameStarted = true;
+      room.playerProgress = {};
+      
+      // 初始化每个玩家的游戏进度并更新状态
+      room.players.forEach(pid => {
+        const player = gameState.players[pid];
+        if (player) {
+          player.status = PLAYER_STATUS.IN_GAME;
+        }
+        room.playerProgress[pid] = {
+          currentQuestion: 0,
+          correctAnswers: 0,
+          startTime: Date.now(),
+          endTime: null
+        };
+      });
+      
+      // 清理预加载状态
+      delete room.preloadStatus;
+      
+      // 向房间内所有玩家发送游戏开始消息
+      io.to(roomId).emit('game_started', room.questions[0]);
+      
+      console.log(`所有玩家预加载完成，游戏正式开始: ${room.name}`);
+      broadcastGameStateUpdate();
+    }
   });
 
   // 处理请求下一题

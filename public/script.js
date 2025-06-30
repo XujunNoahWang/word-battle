@@ -134,6 +134,16 @@ class WordBattleClient {
             this.updatePlayersDisplay();
         });
 
+        // 预加载开始
+        this.socket.on('preload_started', (data) => {
+            this.showPreloadView(data);
+        });
+
+        // 预加载进度更新
+        this.socket.on('preload_progress_update', (data) => {
+            this.updatePreloadProgress(data);
+        });
+
         // 游戏开始
         this.socket.on('game_started', async (gameData) => {
             await this.showGameView(gameData);
@@ -180,6 +190,7 @@ class WordBattleClient {
             // 强制更新UI
             document.getElementById('lobby').classList.remove('hidden');
             document.getElementById('roomView').classList.add('hidden');
+            document.getElementById('preloadView').classList.add('hidden');
             document.getElementById('gameView').classList.add('hidden');
 
             // 更新房间和玩家列表显示
@@ -383,6 +394,9 @@ class WordBattleClient {
                 case 'in_room':
                     statusText = '准备中';
                     break;
+                case 'preloading':
+                    statusText = '预加载中';
+                    break;
                 case 'in_game':
                     statusText = '游戏中';
                     break;
@@ -530,6 +544,7 @@ class WordBattleClient {
     showLobby() {
         document.getElementById('lobby').classList.remove('hidden');
         document.getElementById('roomView').classList.add('hidden');
+        document.getElementById('preloadView').classList.add('hidden');
         document.getElementById('gameView').classList.add('hidden');
     }
 
@@ -537,6 +552,7 @@ class WordBattleClient {
     showRoom() {
         document.getElementById('lobby').classList.add('hidden');
         document.getElementById('roomView').classList.remove('hidden');
+        document.getElementById('preloadView').classList.add('hidden');
         document.getElementById('gameView').classList.add('hidden');
     }
 
@@ -545,6 +561,7 @@ class WordBattleClient {
         // 隐藏其他视图
         document.getElementById('lobby').classList.add('hidden');
         document.getElementById('roomView').classList.add('hidden');
+        document.getElementById('preloadView').classList.add('hidden');
         
         // 显示游戏视图
         const gameView = document.getElementById('gameView');
@@ -999,6 +1016,106 @@ class WordBattleClient {
                 </div>
             </div>
         `;
+    }
+
+    // 显示预加载页面
+    showPreloadView(data) {
+        // 隐藏其他视图
+        document.getElementById('lobby').classList.add('hidden');
+        document.getElementById('roomView').classList.add('hidden');
+        document.getElementById('gameView').classList.add('hidden');
+        
+        // 显示预加载视图
+        const preloadView = document.getElementById('preloadView');
+        preloadView.classList.remove('hidden');
+        
+        // 更新图片数量信息
+        document.getElementById('preloadImageCount').textContent = 
+            `正在加载 ${data.totalImages} 张图片...`;
+        
+        // 初始化玩家进度显示
+        this.updatePreloadProgress({ players: data.players });
+        
+        // 开始预加载图片
+        this.startImagePreload(data.images);
+    }
+
+    // 更新预加载进度
+    updatePreloadProgress(data) {
+        const preloadPlayers = document.getElementById('preloadPlayers');
+        
+        preloadPlayers.innerHTML = data.players.map(player => {
+            const statusText = player.completed ? '加载完成' : `${player.progress}%`;
+            const statusClass = player.completed ? 'completed' : '';
+            
+            return `
+                <div class="preload-player ${player.completed ? 'completed' : ''}">
+                    <div class="preload-player-header">
+                        <span class="preload-player-name">${player.name}</span>
+                        <span class="preload-player-status ${statusClass}">${statusText}</span>
+                    </div>
+                    <div class="preload-progress-bar">
+                        <div class="preload-progress-fill ${player.completed ? 'completed' : ''}" 
+                             style="width: ${player.progress}%"></div>
+                    </div>
+                    <div class="preload-progress-text">${player.progress}% 完成</div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    // 开始图片预加载
+    async startImagePreload(images) {
+        let loadedCount = 0;
+        const totalImages = images.length;
+        const imageCache = [];
+
+        // 并行加载所有图片
+        const loadPromises = images.map((imageName, index) => {
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.onload = () => {
+                    loadedCount++;
+                    imageCache.push(img);
+                    
+                    // 上报进度
+                    this.socket.emit('preload_progress', {
+                        playerId: this.playerId,
+                        roomId: this.currentRoom,
+                        loadedImages: loadedCount,
+                        totalImages: totalImages
+                    });
+                    
+                    resolve();
+                };
+                img.onerror = () => {
+                    console.warn(`图片加载失败: ${imageName}`);
+                    loadedCount++;
+                    
+                    // 即使失败也要上报进度
+                    this.socket.emit('preload_progress', {
+                        playerId: this.playerId,
+                        roomId: this.currentRoom,
+                        loadedImages: loadedCount,
+                        totalImages: totalImages
+                    });
+                    
+                    resolve();
+                };
+                img.src = `/data/images/${imageName}.jpg`;
+            });
+        });
+
+        // 等待所有图片加载完成
+        try {
+            await Promise.all(loadPromises);
+            console.log(`预加载完成: ${loadedCount}/${totalImages} 张图片`);
+            
+            // 保存图片缓存供游戏使用
+            this.imageCache = imageCache;
+        } catch (error) {
+            console.error('预加载过程中出现错误:', error);
+        }
     }
 
     // 显示所有玩家的最终成绩
