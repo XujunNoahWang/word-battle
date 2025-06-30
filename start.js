@@ -5,14 +5,33 @@ const os = require('os');
 function getLocalIPs() {
     const interfaces = os.networkInterfaces();
     const ips = [];
+    let wlanIP = null;  // 存储无线网卡IP
     
     for (const name of Object.keys(interfaces)) {
-        for (const iface of interfaces[name]) {
-            // 跳过内部地址和IPv6地址
-            if (iface.family === 'IPv4' && !iface.internal) {
-                ips.push(iface.address);
+        // 优先检查无线网卡
+        if (name.toLowerCase().includes('wlan')) {
+            for (const iface of interfaces[name]) {
+                if (iface.family === 'IPv4' && !iface.internal) {
+                    wlanIP = iface.address;
+                    break;
+                }
             }
         }
+        
+        // 继续收集其他网卡的IP
+        for (const iface of interfaces[name]) {
+            if (iface.family === 'IPv4' && !iface.internal) {
+                // 排除VMware的虚拟网卡IP
+                if (!name.toLowerCase().includes('vmware')) {
+                    ips.push(iface.address);
+                }
+            }
+        }
+    }
+    
+    // 如果找到无线网卡IP，将其放在数组第一位
+    if (wlanIP) {
+        ips.unshift(wlanIP);
     }
     
     return ips;
