@@ -224,17 +224,35 @@ function getRandomWordAndImages(usedWords) {
 }
 
 // 生成题目列表
-function generateQuestions() {
+function generateQuestions(roomId) {
+  const room = gameState.rooms[roomId];
   const questions = [];
-  const usedWords = [];
+  const roundUsedWords = [];
+  const QUESTIONS_PER_ROUND = 10;
   
-  while (questions.length < wordlist.length) {
-    const gameData = getRandomWordAndImages(usedWords);
+  // 获取可用的单词（排除本房间已使用的单词）
+  const availableWords = wordlist.filter(word => !room.usedWords.includes(word));
+  
+  // 如果可用单词不足10个，重置已使用单词列表
+  if (availableWords.length < QUESTIONS_PER_ROUND) {
+    console.log(`可用单词不足${QUESTIONS_PER_ROUND}个，重置单词池`);
+    room.usedWords = [];
+  }
+  
+  while (questions.length < QUESTIONS_PER_ROUND) {
+    const gameData = getRandomWordAndImages(roundUsedWords);
     if (!gameData) break;
     
+    // 如果这个单词已经在房间使用过，跳过
+    if (room.usedWords.includes(gameData.word)) continue;
+    
     questions.push(gameData);
-    usedWords.push(gameData.word);
+    roundUsedWords.push(gameData.word);
   }
+  
+  // 将本轮使用的单词添加到房间的已使用单词列表中
+  room.usedWords.push(...roundUsedWords);
+  room.roundCount++;
   
   return questions;
 }
@@ -331,7 +349,10 @@ io.on('connection', (socket) => {
       name: player.name,
       players: [playerId],
       host: playerId,
-      gameStarted: false
+      gameStarted: false,
+      originalPlayers: [playerId],  // 记录原始玩家
+      usedWords: [],  // 记录已使用的单词
+      roundCount: 0   // 记录游戏轮数
     };
 
     // 更新玩家状态
@@ -369,6 +390,13 @@ io.on('connection', (socket) => {
     room.players.push(playerId);
     player.status = PLAYER_STATUS.IN_ROOM;
     player.room = roomId;
+    
+    // 检查是否是新玩家（不在原始玩家列表中）
+    if (!room.originalPlayers.includes(playerId)) {
+      console.log(`新玩家 ${playerId} 加入房间，重置单词池`);
+      room.usedWords = [];  // 重置已使用单词列表
+      room.originalPlayers = [...room.players];  // 更新原始玩家列表
+    }
     
     socket.join(roomId);
     
@@ -410,7 +438,7 @@ io.on('connection', (socket) => {
 
     // 重置房间游戏状态
     room.gameStarted = true;
-    room.questions = generateQuestions();
+    room.questions = generateQuestions(roomId);
     room.playerProgress = {};
     
     // 初始化每个玩家的进度并更新状态
