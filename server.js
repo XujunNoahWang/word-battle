@@ -765,7 +765,7 @@ io.on('connection', (socket) => {
 });
 
 // 启动服务器
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`前端服务器运行在端口 ${PORT}`);
   console.log(`WebSocket服务器运行在端口 ${PORT}`);
