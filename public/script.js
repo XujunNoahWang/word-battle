@@ -8,6 +8,13 @@ class WordBattleClient {
             players: {},
             rooms: {}
         };
+        this.audioContextActivated = false; // 跟踪移动端音频上下文状态
+        
+        // 移动端设备检测和初始化日志
+        if (this.isMobileDevice()) {
+            console.log('📱 检测到移动设备，将在游戏开始时激活语音功能');
+            console.log('📱 User Agent:', navigator.userAgent);
+        }
         
         this.init();
     }
@@ -22,8 +29,8 @@ class WordBattleClient {
     // 设置UI事件监听
     setupUI() {
         // 创建房间 - 直接创建，使用用户名作为房间名
-        document.getElementById('createRoomBtn').addEventListener('click', () => {
-            this.createRoom();
+        document.getElementById('createRoomBtn').addEventListener('click', async () => {
+            await this.createRoom();
         });
 
         // 房间操作
@@ -31,8 +38,8 @@ class WordBattleClient {
             this.leaveRoom();
         });
 
-        document.getElementById('startGameBtn').addEventListener('click', () => {
-            this.startGame();
+        document.getElementById('startGameBtn').addEventListener('click', async () => {
+            await this.startGame();
         });
 
         // 用户名编辑
@@ -130,8 +137,8 @@ class WordBattleClient {
         });
 
         // 游戏开始
-        this.socket.on('game_started', (gameData) => {
-            this.showGameView(gameData);
+        this.socket.on('game_started', async (gameData) => {
+            await this.showGameView(gameData);
         });
 
         // 下一题
@@ -346,7 +353,7 @@ class WordBattleClient {
                         <span class="player-count">${room.players.length}人</span>
                     </div>
                     ${!isPlayerInRoom ? `
-                        <button class="btn btn-primary join-room-btn" onclick="wordBattleClient.joinRoom('${room.id}')">
+                        <button class="btn btn-primary join-room-btn" onclick="wordBattleClient.joinRoom('${room.id}').catch(console.error)">
                             加入房间
                         </button>
                     ` : ''}
@@ -420,12 +427,23 @@ class WordBattleClient {
     }
 
     // 创建房间
-    createRoom() {
+    async createRoom() {
         // 检查是否已在房间中
         const currentPlayer = this.gameState.players[this.playerId];
         if (currentPlayer && currentPlayer.status === 'in_room') {
             this.showNotification('创建失败', '您已在房间中，请先退出当前房间', 'warning');
             return;
+        }
+
+        // 移动端在用户交互时激活音频上下文
+        if (this.isMobileDevice() && !this.audioContextActivated) {
+            console.log('📱 移动端在创建房间时激活音频上下文...');
+            try {
+                await this.activateAudioContext();
+                this.showNotification('🔊 语音准备', '移动端语音功能已准备就绪！', 'success');
+            } catch (error) {
+                console.warn('音频上下文激活失败:', error);
+            }
         }
 
         this.socket.emit('create_room', {
@@ -436,7 +454,7 @@ class WordBattleClient {
     }
 
     // 加入房间
-    joinRoom(roomId) {
+    async joinRoom(roomId) {
         // 检查是否已在房间中
         const currentPlayer = this.gameState.players[this.playerId];
         if (currentPlayer && currentPlayer.status === 'in_room') {
@@ -454,6 +472,17 @@ class WordBattleClient {
         if (room.gameStarted) {
             this.showNotification('加入失败', '游戏已开始，无法加入', 'error');
             return;
+        }
+
+        // 移动端在用户交互时激活音频上下文
+        if (this.isMobileDevice() && !this.audioContextActivated) {
+            console.log('📱 移动端在加入房间时激活音频上下文...');
+            try {
+                await this.activateAudioContext();
+                this.showNotification('🔊 语音准备', '移动端语音功能已准备就绪！', 'success');
+            } catch (error) {
+                console.warn('音频上下文激活失败:', error);
+            }
         }
 
         this.socket.emit('join_room', {
@@ -478,10 +507,21 @@ class WordBattleClient {
         this.showNotification('离开房间', '已返回游戏大厅', 'success');
     }
 
-    // 开始游戏
-    startGame() {
+        // 开始游戏
+    async startGame() {
         if (!this.currentRoom) return;
-
+        
+        // 移动端在真实用户交互时激活音频上下文
+        if (this.isMobileDevice() && !this.audioContextActivated) {
+            console.log('📱 移动端在用户交互时激活音频上下文...');
+            try {
+                await this.activateAudioContext();
+                this.showNotification('🔊 语音功能', '移动端语音功能已激活！每题会自动播放英文发音', 'success');
+            } catch (error) {
+                console.warn('音频上下文激活失败:', error);
+            }
+        }
+        
         this.socket.emit('start_game', {
             playerId: this.playerId,
             roomId: this.currentRoom
@@ -503,7 +543,7 @@ class WordBattleClient {
     }
 
     // 显示游戏页面
-    showGameView(gameData) {
+    async showGameView(gameData) {
         // 隐藏其他视图
         document.getElementById('lobby').classList.add('hidden');
         document.getElementById('roomView').classList.add('hidden');
@@ -511,6 +551,11 @@ class WordBattleClient {
         // 显示游戏视图
         const gameView = document.getElementById('gameView');
         gameView.classList.remove('hidden');
+        
+        // 移动端提示（音频上下文已在开始游戏时激活）
+        if (this.isMobileDevice()) {
+            console.log('🎮 移动端游戏开始，音频上下文状态:', this.audioContextActivated);
+        }
         
         this.updateGameView(gameData);
     }
@@ -532,7 +577,9 @@ class WordBattleClient {
         const replayButton = document.createElement('button');
         replayButton.className = 'replay-button';
         replayButton.innerHTML = '▶';
-        replayButton.onclick = () => this.speakWord(word);
+        replayButton.onclick = async () => {
+            await this.speakWord(word);
+        };
         document.querySelector('.word-display').appendChild(replayButton);
         
         // 更新图片网格
@@ -554,8 +601,12 @@ class WordBattleClient {
                 loadedImages++;
                 if (loadedImages === images.length) {
                     // 所有图片加载完成后播放语音
-                    setTimeout(() => {
-                        this.speakWord(word);
+                    setTimeout(async () => {
+                        await this.speakWord(word);
+                        // 移动端额外日志
+                        if (this.isMobileDevice()) {
+                            console.log('📱 移动端自动播放语音完成:', word);
+                        }
                     }, 300);
                 }
             };
@@ -570,12 +621,92 @@ class WordBattleClient {
         });
     }
 
+    // 检测是否为移动设备
+    isMobileDevice() {
+        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+               ('ontouchstart' in window) || 
+               (navigator.maxTouchPoints > 0);
+    }
+
+    // 激活音频上下文（移动端专用）
+    async activateAudioContext() {
+        if (this.isMobileDevice() && 'speechSynthesis' in window && !this.audioContextActivated) {
+            try {
+                // 播放一个极短的无声语音来激活音频上下文
+                const silentUtterance = new SpeechSynthesisUtterance('');
+                silentUtterance.volume = 0; // 设置为无声
+                silentUtterance.rate = 10; // 最快速度
+                silentUtterance.text = ' '; // 最小内容
+                
+                // 使用Promise来等待语音播放完成
+                return new Promise((resolve) => {
+                    silentUtterance.onend = () => {
+                        console.log('📱 移动端音频上下文已激活');
+                        this.audioContextActivated = true;
+                        resolve();
+                    };
+                    silentUtterance.onerror = () => {
+                        console.warn('⚠️ 音频上下文激活失败，但继续执行');
+                        this.audioContextActivated = true; // 标记为已尝试，避免重复
+                        resolve();
+                    };
+                    speechSynthesis.speak(silentUtterance);
+                    
+                    // 设置超时，避免卡住
+                    setTimeout(() => {
+                        this.audioContextActivated = true;
+                        resolve();
+                    }, 500);
+                });
+            } catch (error) {
+                console.warn('音频上下文激活失败:', error);
+                this.audioContextActivated = true; // 标记为已尝试
+            }
+        }
+    }
+
     // 语音播报单词
-    speakWord(word) {
+    async speakWord(word) {
         if ('speechSynthesis' in window) {
+            // 移动端需要先确保音频上下文已激活
+            if (this.isMobileDevice() && !this.audioContextActivated) {
+                console.log('📱 移动端音频上下文未激活，正在激活...');
+                await this.activateAudioContext();
+            }
+            
+            // 清除可能存在的语音队列
+            speechSynthesis.cancel();
+            
+            // 等待一小段时间确保之前的语音已清除
+            await new Promise(resolve => setTimeout(resolve, 50));
+            
             const utterance = new SpeechSynthesisUtterance(word);
             utterance.lang = 'en-US';  // 使用美式英语
             utterance.rate = 0.8;  // 稍微放慢语速
+            utterance.volume = 1;  // 确保音量正常
+            
+            // 添加成功和错误处理
+            utterance.onstart = () => {
+                if (this.isMobileDevice()) {
+                    console.log('📱 移动端语音开始播放:', word);
+                }
+            };
+            
+            utterance.onend = () => {
+                if (this.isMobileDevice()) {
+                    console.log('📱 移动端语音播放完成:', word);
+                }
+            };
+            
+            utterance.onerror = (event) => {
+                console.warn('语音播放失败:', event.error, '单词:', word);
+                // 移动端如果失败，可以尝试重新激活音频上下文
+                if (this.isMobileDevice()) {
+                    console.log('📱 移动端语音播放失败，重置音频上下文状态');
+                    this.audioContextActivated = false;
+                }
+            };
+            
             speechSynthesis.speak(utterance);
         }
     }
