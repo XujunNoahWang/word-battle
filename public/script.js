@@ -9,6 +9,10 @@ class WordBattleClient {
             rooms: {}
         };
         
+        // 初始化语音合成
+        this.speechSynthesis = window.speechSynthesis;
+        this.speechVoice = null;
+        
         this.init();
     }
 
@@ -17,6 +21,7 @@ class WordBattleClient {
         this.setupUI();
         this.setupWordManager();
         this.connectToServer();
+        this.initSpeech();
     }
 
     // 设置UI事件监听
@@ -507,6 +512,47 @@ class WordBattleClient {
         this.updateGameView(gameData);
     }
 
+    // 初始化语音
+    async initSpeech() {
+        // 等待语音列表加载
+        await new Promise(resolve => {
+            let interval = setInterval(() => {
+                const voices = this.speechSynthesis.getVoices();
+                if (voices.length > 0) {
+                    clearInterval(interval);
+                    resolve(voices);
+                }
+            }, 100);
+        });
+
+        // 获取所有语音
+        const voices = this.speechSynthesis.getVoices();
+        
+        // 查找美式英语语音
+        this.speechVoice = voices.find(voice => 
+            voice.lang === 'en-US' && voice.name.includes('English (United States)')
+        ) || voices.find(voice => 
+            voice.lang === 'en-US'
+        ) || voices[0];
+    }
+
+    // 播放单词语音
+    playWordAudio(word) {
+        if (!this.speechSynthesis || !this.speechVoice) return;
+        
+        // 取消之前的语音
+        this.speechSynthesis.cancel();
+        
+        // 创建新的语音实例
+        const utterance = new SpeechSynthesisUtterance(word);
+        utterance.voice = this.speechVoice;
+        utterance.rate = 0.9; // 稍微放慢语速
+        utterance.pitch = 1;
+        
+        // 播放语音
+        this.speechSynthesis.speak(utterance);
+    }
+
     // 更新游戏视图
     updateGameView(data) {
         const { word, images, progress } = data;
@@ -530,6 +576,32 @@ class WordBattleClient {
         if (progress) {
             this.updateProgress(progress);
         }
+
+        // 设置重播按钮事件
+        const replayButton = document.getElementById('replayButton');
+        if (replayButton) {
+            replayButton.onclick = () => this.playWordAudio(word);
+        }
+
+        // 当所有图片加载完成后播放语音
+        const imageElements = document.querySelectorAll('.image-item img');
+        let loadedImages = 0;
+        
+        const playAudioWhenReady = () => {
+            loadedImages++;
+            if (loadedImages === imageElements.length) {
+                // 所有图片加载完成，播放语音
+                setTimeout(() => this.playWordAudio(word), 300);
+            }
+        };
+
+        imageElements.forEach(img => {
+            if (img.complete) {
+                playAudioWhenReady();
+            } else {
+                img.onload = playAudioWhenReady;
+            }
+        });
     }
 
     // 选择答案
