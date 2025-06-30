@@ -535,7 +535,7 @@ class WordBattleClient {
     // 选择答案
     async selectAnswer(selectedImage, imageElement) {
         // 防止重复点击
-        if (imageElement.classList.contains('correct') || imageElement.classList.contains('incorrect')) {
+        if (imageElement.classList.contains('correct') || imageElement.classList.contains('wrong')) {
             return;
         }
         
@@ -555,7 +555,7 @@ class WordBattleClient {
             const { isCorrect, progress } = data;
             
             // 添加反馈效果
-            const feedbackClass = isCorrect ? 'correct' : 'incorrect';
+            const feedbackClass = isCorrect ? 'correct' : 'wrong';
             imageElement.classList.add(feedbackClass);
             
             // 更新进度（如果有的话）
