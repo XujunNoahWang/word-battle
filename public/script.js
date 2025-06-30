@@ -91,10 +91,8 @@ class WordBattleClient {
 
     // 连接到服务器
     connectToServer() {
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = `${protocol}//${window.location.hostname}:${window.location.port || '3000'}`;
-        
-        this.socket = io(wsUrl);
+        // 自动使用当前页面的URL作为WebSocket连接地址
+        this.socket = io();
 
         // 连接成功
         this.socket.on('connect', () => {

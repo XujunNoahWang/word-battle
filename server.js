@@ -767,8 +767,7 @@ io.on('connection', (socket) => {
 // 启动服务器
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`前端服务器运行在端口 ${PORT}`);
-  console.log(`WebSocket服务器运行在端口 ${PORT}`);
+  console.log(`服务器运行在端口 ${PORT}`);
   console.log('\n🎮 Word Battle 已启动！');
   // console.log(`📍 本地访问: http://localhost:${PORT}`);
   // console.log('🌐 局域网访问: http://[你的IP]:${PORT}');
