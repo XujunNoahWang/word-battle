@@ -189,6 +189,44 @@ body {
     font-size: var(--font-size-sm);
     font-weight: 500;
     color: var(--text-primary);
+    transition: all 0.2s ease;
+    cursor: pointer;
+    border: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    box-shadow: var(--shadow-sm);
+    position: relative;
+    overflow: hidden;
+}
+
+.player-badge::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(to bottom, rgba(255,255,255,0.1), transparent);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.player-badge:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+    background: var(--bg-primary);
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+}
+
+.player-badge:hover::before {
+    opacity: 1;
+}
+
+.player-badge:active {
+    transform: translateY(0);
+    box-shadow: var(--shadow-sm);
 }
 
 .status-indicator {
@@ -234,6 +272,7 @@ body {
 
 .panel-header {
     padding: var(--spacing-lg);
+    height: 72px; /* 固定header高度 */
     border-bottom: 1px solid var(--border-color);
     display: flex;
     align-items: center;
@@ -245,6 +284,8 @@ body {
     font-size: var(--font-size-lg);
     font-weight: 600;
     color: var(--text-primary);
+    margin: 0;
+    line-height: 1.5;
 }
 
 .count-badge {
@@ -256,6 +297,10 @@ body {
     font-weight: 600;
     min-width: 24px;
     text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 24px;
 }
 
 .panel-content {
@@ -278,8 +323,9 @@ body {
     font-weight: 500;
     cursor: pointer;
     transition: all 0.2s ease;
-    min-height: 36px;
+    height: 36px;
     gap: var(--spacing-xs);
+    white-space: nowrap;
 }
 
 .btn:disabled {
