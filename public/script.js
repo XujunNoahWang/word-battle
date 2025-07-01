@@ -28,12 +28,10 @@ class WordBattleClient {
 
     // 设置UI事件监听
     setupUI() {
-        // 创建房间 - 直接创建，使用用户名作为房间名
         document.getElementById('createRoomBtn').addEventListener('click', async () => {
             await this.createRoom();
         });
 
-        // 房间操作
         document.getElementById('leaveRoomBtn').addEventListener('click', () => {
             this.leaveRoom();
         });
@@ -42,7 +40,6 @@ class WordBattleClient {
             await this.startGame();
         });
 
-        // 用户名编辑
         document.getElementById('playerBadge').addEventListener('click', () => {
             this.showEditNameModal();
         });
@@ -55,7 +52,6 @@ class WordBattleClient {
             this.updatePlayerName();
         });
 
-        // 按Enter键确认修改用户名
         document.getElementById('newNameInput').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
                 this.updatePlayerName();
@@ -65,9 +61,6 @@ class WordBattleClient {
 
     // 单词管理相关
     setupWordManager() {
-        const ADMIN_PASSWORD = '0627';
-        
-        // 显示密码验证弹窗
         document.getElementById('addWordBtn').addEventListener('click', () => {
             const passwordModal = document.getElementById('passwordModal');
             const passwordInput = document.getElementById('passwordInput');
@@ -77,32 +70,27 @@ class WordBattleClient {
             passwordInput.focus();
         });
 
-        // 取消密码验证
         document.getElementById('cancelPassword').addEventListener('click', () => {
             const passwordModal = document.getElementById('passwordModal');
             passwordModal.classList.add('hidden');
             passwordModal.classList.remove('show');
         });
 
-        // 确认密码
         document.getElementById('confirmPassword').addEventListener('click', () => {
             this.verifyPassword();
         });
 
-        // 密码输入框回车事件
         document.getElementById('passwordInput').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
                 this.verifyPassword();
             }
         });
 
-        // 关闭单词管理页面
         document.getElementById('closeWordManager').addEventListener('click', () => {
             document.getElementById('wordManager').classList.add('hidden');
             document.getElementById('lobby').classList.remove('hidden');
         });
 
-        // 添加单词
         document.getElementById('wordInput').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
                 this.addWord();
@@ -122,14 +110,12 @@ class WordBattleClient {
         const password = passwordInput.value;
 
         if (password === ADMIN_PASSWORD) {
-            // 密码正确，显示单词管理页面
             passwordModal.classList.add('hidden');
             passwordModal.classList.remove('show');
             document.getElementById('wordManager').classList.remove('hidden');
             document.getElementById('lobby').classList.add('hidden');
             this.loadWords();
         } else {
-            // 密码错误，显示提示
             this.showNotification('错误', '密码不正确', 'error');
             passwordInput.value = '';
             passwordInput.focus();
@@ -138,41 +124,33 @@ class WordBattleClient {
 
     // 连接到服务器
     connectToServer() {
-        // 自动使用当前页面的URL作为WebSocket连接地址
         this.socket = io();
 
-        // 连接成功
         this.socket.on('connect', () => {
             console.log('已连接到服务器');
             this.hideLoading();
             this.requestIdentity();
         });
 
-        // 身份分配
         this.socket.on('identity_assigned', (playerId) => {
             this.playerId = playerId;
-            // 保存玩家ID到本地存储
             localStorage.setItem('word_battle_player_id', playerId);
             
-            // 获取当前玩家的名称
             const currentPlayer = this.gameState.players[playerId];
             const displayName = currentPlayer ? currentPlayer.name : playerId;
             
             this.updatePlayerBadge(displayName);
         });
 
-        // 游戏状态更新
         this.socket.on('game_state_update', (gameState) => {
             this.gameState = gameState;
             this.updateUI();
         });
 
-        // 玩家列表更新
         this.socket.on('players_update', (players) => {
             const oldName = this.gameState.players[this.playerId]?.name;
             this.gameState.players = players;
             
-            // 如果当前玩家的名字发生变化，更新显示（不再显示提示框）
             const newName = players[this.playerId]?.name;
             if (oldName && newName && oldName !== newName) {
                 this.updatePlayerBadge(newName);
@@ -181,52 +159,41 @@ class WordBattleClient {
             this.updatePlayersDisplay();
         });
 
-        // 预加载开始
         this.socket.on('preload_started', (data) => {
             this.showPreloadView(data);
         });
 
-        // 预加载进度更新
         this.socket.on('preload_progress_update', (data) => {
             this.updatePreloadProgress(data);
         });
 
-        // 游戏开始
         this.socket.on('game_started', async (gameData) => {
             await this.showGameView(gameData);
         });
 
-        // 下一题
         this.socket.on('next_question', (data) => {
             this.updateGameView(data);
         });
 
-        // 游戏结束
         this.socket.on('game_over', (data) => {
             this.showGameOver(data);
         });
 
-        // 答题结果
         this.socket.on('answer_result', (data) => {
             const { isCorrect, progress } = data;
-            // 只更新进度，不显示提示框
             this.updateProgress(progress);
         });
 
-        // 房间创建成功
         this.socket.on('room_created', (data) => {
             this.currentRoom = data.roomId;
             this.showRoom();
         });
 
-        // 房间解散
         this.socket.on('room_dissolved', (data) => {
-            // 立即更新游戏状态
             if (this.gameState.rooms[this.currentRoom]) {
                 delete this.gameState.rooms[this.currentRoom];
             }
             
-            // 更新当前玩家状态
             if (this.gameState.players[this.playerId]) {
                 this.gameState.players[this.playerId].status = 'idle';
                 this.gameState.players[this.playerId].room = null;
@@ -234,27 +201,22 @@ class WordBattleClient {
 
             this.currentRoom = null;
 
-            // 强制更新UI
             document.getElementById('lobby').classList.remove('hidden');
             document.getElementById('roomView').classList.add('hidden');
             document.getElementById('preloadView').classList.add('hidden');
             document.getElementById('gameView').classList.add('hidden');
 
-            // 更新房间和玩家列表显示
             this.updateRoomsDisplay();
             this.updatePlayersDisplay();
             
-            // 显示通知
             this.showNotification('房间解散', `${data.roomName}房间已解散`, 'warning');
         });
 
-        // 连接错误
         this.socket.on('connect_error', (error) => {
             console.error('连接错误:', error);
             this.showNotification('连接失败', '无法连接到服务器，请检查网络', 'error');
         });
 
-        // 断线重连
         this.socket.on('disconnect', (reason) => {
             console.log('连接断开:', reason);
             this.showNotification('连接断开', '正在尝试重新连接...', 'warning');
@@ -266,28 +228,23 @@ class WordBattleClient {
             this.showNotification('重新连接', '连接已恢复', 'success');
         });
 
-        // 图片下载完成事件
         this.socket.on('image_downloaded', (data) => {
             if (data.success) {
                 this.showNotification('图片下载', `单词 "${data.word}" 的图片${data.message}`, 'success');
-                // 刷新显示以更新图片
                 this.loadWords();
             } else {
                 this.showNotification('图片下载', `单词 "${data.word}" 的图片${data.message}`, 'warning');
             }
         });
 
-        // 游戏完成
         this.socket.on('game_completed', (results) => {
             this.showGameResults(results);
         });
 
-        // 所有玩家完成
         this.socket.on('all_players_completed', (results) => {
             this.showAllPlayersResults(results);
         });
 
-        // 游戏开始错误
         this.socket.on('game_start_error', (data) => {
             this.showNotification('无法开始游戏', data.message, 'error');
         });
@@ -313,7 +270,6 @@ class WordBattleClient {
     // 更新玩家徽章
     updatePlayerBadge(playerName) {
         document.getElementById('playerBadge').textContent = playerName;
-        // 保存玩家名字到本地存储
         localStorage.setItem('word_battle_player_name', playerName);
     }
 
@@ -346,10 +302,8 @@ class WordBattleClient {
         const playersContainer = document.getElementById('playersList');
         const playersCount = document.getElementById('playersCount');
         
-        // 显示所有在线玩家（包括自己），过滤掉离线玩家
         const onlinePlayers = Object.values(this.gameState.players).filter(p => p.status !== 'offline');
         
-        // 更新header右上角的用户名显示
         const currentPlayer = this.gameState.players[this.playerId];
         if (currentPlayer) {
             this.updatePlayerBadge(currentPlayer.name);
@@ -426,17 +380,14 @@ class WordBattleClient {
         const currentPlayer = this.gameState.players[this.playerId];
         const isHost = room.host === this.playerId;
 
-        // 更新房间标题
         document.getElementById('roomTitle').textContent = `${this.gameState.players[room.host].name}的房间`;
         document.getElementById('roomHostName').textContent = this.gameState.players[room.host].name;
 
-        // 更新玩家列表
         const playersList = document.getElementById('roomPlayersList');
         playersList.innerHTML = room.players.map(playerId => {
             const player = this.gameState.players[playerId];
             let statusText = '';
             
-            // 根据玩家状态显示不同的文本
             switch(player.status) {
                 case 'in_room':
                     statusText = '准备中';
@@ -462,12 +413,10 @@ class WordBattleClient {
             `;
         }).join('');
 
-        // 更新开始游戏按钮
         const startGameBtn = document.getElementById('startGameBtn');
         if (startGameBtn) {
             if (isHost) {
                 startGameBtn.classList.remove('hidden');
-                // 检查是否所有玩家都已准备
                 const allReady = room.players.every(pid => 
                     this.gameState.players[pid].status === 'in_room'
                 );
@@ -487,14 +436,12 @@ class WordBattleClient {
 
     // 创建房间
     async createRoom() {
-        // 检查是否已在房间中
         const currentPlayer = this.gameState.players[this.playerId];
         if (currentPlayer && currentPlayer.status === 'in_room') {
             this.showNotification('创建失败', '您已在房间中，请先退出当前房间', 'warning');
             return;
         }
 
-        // 移动端在用户交互时激活音频上下文
         if (this.isMobileDevice() && !this.audioContextActivated) {
             console.log('📱 移动端在创建房间时激活音频上下文...');
             try {
@@ -514,7 +461,6 @@ class WordBattleClient {
 
     // 加入房间
     async joinRoom(roomId) {
-        // 检查是否已在房间中
         const currentPlayer = this.gameState.players[this.playerId];
         if (currentPlayer && currentPlayer.status === 'in_room') {
             this.showNotification('加入失败', '您已在房间中，请先退出当前房间', 'warning');
@@ -533,7 +479,6 @@ class WordBattleClient {
             return;
         }
 
-        // 移动端在用户交互时激活音频上下文
         if (this.isMobileDevice() && !this.audioContextActivated) {
             console.log('📱 移动端在加入房间时激活音频上下文...');
             try {
@@ -566,11 +511,10 @@ class WordBattleClient {
         this.showNotification('离开房间', '已返回游戏大厅', 'success');
     }
 
-        // 开始游戏
+    // 开始游戏
     async startGame() {
         if (!this.currentRoom) return;
         
-        // 移动端在真实用户交互时激活音频上下文
         if (this.isMobileDevice() && !this.audioContextActivated) {
             console.log('📱 移动端在用户交互时激活音频上下文...');
             try {
@@ -605,16 +549,13 @@ class WordBattleClient {
 
     // 显示游戏页面
     async showGameView(gameData) {
-        // 隐藏其他视图
         document.getElementById('lobby').classList.add('hidden');
         document.getElementById('roomView').classList.add('hidden');
         document.getElementById('preloadView').classList.add('hidden');
         
-        // 显示游戏视图
         const gameView = document.getElementById('gameView');
         gameView.classList.remove('hidden');
         
-        // 移动端提示（音频上下文已在开始游戏时激活）
         if (this.isMobileDevice()) {
             console.log('🎮 移动端游戏开始，音频上下文状态:', this.audioContextActivated);
         }
@@ -626,16 +567,13 @@ class WordBattleClient {
     updateGameView(data) {
         const { word, images } = data;
         
-        // 更新单词显示
         document.querySelector('.word-display h2').textContent = word;
         
-        // 清除现有的播放按钮（如果有的话）
         const existingButton = document.querySelector('.replay-button');
         if (existingButton) {
             existingButton.remove();
         }
         
-        // 添加播放按钮
         const replayButton = document.createElement('button');
         replayButton.className = 'replay-button';
         replayButton.innerHTML = '▶';
@@ -644,7 +582,6 @@ class WordBattleClient {
         };
         document.querySelector('.word-display').appendChild(replayButton);
         
-        // 更新图片网格
         const imageGrid = document.querySelector('.image-grid');
         imageGrid.innerHTML = images.map((image, index) => `
             <div class="image-item" data-index="${index}">
@@ -652,7 +589,6 @@ class WordBattleClient {
             </div>
         `).join('');
         
-        // 添加图片点击事件
         const imageItems = document.querySelectorAll('.image-item');
         let loadedImages = 0;
         
@@ -662,10 +598,8 @@ class WordBattleClient {
             img.onload = () => {
                 loadedImages++;
                 if (loadedImages === images.length) {
-                    // 所有图片加载完成后播放语音
                     setTimeout(async () => {
                         await this.speakWord(word);
-                        // 移动端额外日志
                         if (this.isMobileDevice()) {
                             console.log('📱 移动端自动播放语音完成:', word);
                         }
@@ -673,7 +607,6 @@ class WordBattleClient {
                 }
             };
             
-            // 添加错误处理
             img.onerror = () => {
                 console.error(`Failed to load image: ${image}`);
                 item.innerHTML = `<div class="image-error">图片加载失败</div>`;
@@ -694,13 +627,11 @@ class WordBattleClient {
     async activateAudioContext() {
         if (this.isMobileDevice() && 'speechSynthesis' in window && !this.audioContextActivated) {
             try {
-                // 播放一个极短的无声语音来激活音频上下文
                 const silentUtterance = new SpeechSynthesisUtterance('');
-                silentUtterance.volume = 0; // 设置为无声
-                silentUtterance.rate = 10; // 最快速度
-                silentUtterance.text = ' '; // 最小内容
+                silentUtterance.volume = 0;
+                silentUtterance.rate = 10;
+                silentUtterance.text = ' ';
                 
-                // 使用Promise来等待语音播放完成
                 return new Promise((resolve) => {
                     silentUtterance.onend = () => {
                         console.log('📱 移动端音频上下文已激活');
@@ -709,12 +640,11 @@ class WordBattleClient {
                     };
                     silentUtterance.onerror = () => {
                         console.warn('⚠️ 音频上下文激活失败，但继续执行');
-                        this.audioContextActivated = true; // 标记为已尝试，避免重复
+                        this.audioContextActivated = true;
                         resolve();
                     };
                     speechSynthesis.speak(silentUtterance);
                     
-                    // 设置超时，避免卡住
                     setTimeout(() => {
                         this.audioContextActivated = true;
                         resolve();
@@ -722,7 +652,7 @@ class WordBattleClient {
                 });
             } catch (error) {
                 console.warn('音频上下文激活失败:', error);
-                this.audioContextActivated = true; // 标记为已尝试
+                this.audioContextActivated = true;
             }
         }
     }
@@ -730,24 +660,20 @@ class WordBattleClient {
     // 语音播报单词
     async speakWord(word) {
         if ('speechSynthesis' in window) {
-            // 移动端需要先确保音频上下文已激活
             if (this.isMobileDevice() && !this.audioContextActivated) {
                 console.log('📱 移动端音频上下文未激活，正在激活...');
                 await this.activateAudioContext();
             }
             
-            // 清除可能存在的语音队列
             speechSynthesis.cancel();
             
-            // 等待一小段时间确保之前的语音已清除
             await new Promise(resolve => setTimeout(resolve, 50));
             
             const utterance = new SpeechSynthesisUtterance(word);
-            utterance.lang = 'en-US';  // 使用美式英语
-            utterance.rate = 0.8;  // 稍微放慢语速
-            utterance.volume = 1;  // 确保音量正常
+            utterance.lang = 'en-US';
+            utterance.rate = 0.8;
+            utterance.volume = 1;
             
-            // 添加成功和错误处理
             utterance.onstart = () => {
                 if (this.isMobileDevice()) {
                     console.log('📱 移动端语音开始播放:', word);
@@ -762,7 +688,6 @@ class WordBattleClient {
             
             utterance.onerror = (event) => {
                 console.warn('语音播放失败:', event.error, '单词:', word);
-                // 移动端如果失败，可以尝试重新激活音频上下文
                 if (this.isMobileDevice()) {
                     console.log('📱 移动端语音播放失败，重置音频上下文状态');
                     this.audioContextActivated = false;
@@ -775,43 +700,33 @@ class WordBattleClient {
 
     // 选择答案
     async selectAnswer(selectedImage, imageElement) {
-        // 防止重复点击
         if (imageElement.classList.contains('correct') || imageElement.classList.contains('incorrect')) {
             return;
         }
         
-        // 禁用所有图片点击
         const allImages = document.querySelectorAll('.image-item');
         allImages.forEach(item => item.style.pointerEvents = 'none');
         
-        // 发送答案到服务器
         this.socket.emit('answer_selected', {
             playerId: this.playerId,
             roomId: this.currentRoom,
             selectedImage: selectedImage
         });
 
-        // 监听一次性答题结果事件
         this.socket.once('answer_result', (data) => {
             const { isCorrect, progress } = data;
             
-            // 添加反馈效果
             const feedbackClass = isCorrect ? 'correct' : 'wrong';
             imageElement.classList.add(feedbackClass);
             
-            // 更新进度（如果有的话）
             if (progress) {
                 this.updateProgress(progress);
             }
             
-            // 0.5秒后移除反馈效果并请求下一题
             setTimeout(() => {
-                // 移除反馈效果
                 imageElement.classList.remove(feedbackClass);
-                // 恢复图片点击
                 allImages.forEach(item => item.style.pointerEvents = 'auto');
                 
-                // 请求下一题
                 this.socket.emit('request_next_question', {
                     playerId: this.playerId,
                     roomId: this.currentRoom
@@ -840,13 +755,11 @@ class WordBattleClient {
 
     // 返回房间
     returnToRoom() {
-        // 通知服务器玩家返回房间
         this.socket.emit('return_to_room', {
             playerId: this.playerId,
             roomId: this.currentRoom
         });
 
-        // 重置游戏视图
         const gameView = document.getElementById('gameView');
         gameView.innerHTML = `
             <main class="game-content">
@@ -861,7 +774,6 @@ class WordBattleClient {
             </main>
         `;
         
-        // 返回房间视图
         this.showRoom();
     }
 
@@ -878,7 +790,6 @@ class WordBattleClient {
 
         container.appendChild(notification);
 
-        // 3秒后自动移除
         setTimeout(() => {
             if (notification.parentNode) {
                 notification.style.animation = 'slideOutRight 0.3s ease-out';
@@ -922,7 +833,6 @@ class WordBattleClient {
                 newName: newName
             });
             
-            // 保存新名字到本地存储
             localStorage.setItem('word_battle_player_name', newName);
             
             this.hideEditNameModal();
@@ -1012,7 +922,6 @@ class WordBattleClient {
             </div>
         `).join('');
         
-        // 更新单词数量显示
         this.updateWordCount(words.length);
     }
 
@@ -1026,7 +935,7 @@ class WordBattleClient {
 
     // 更新游戏进度显示
     updateProgress(progress) {
-        if (!progress) return;  // 如果progress为undefined，直接返回
+        if (!progress) return;
         
         const currentProgress = document.getElementById('current-progress');
         const totalQuestions = document.getElementById('total-questions');
@@ -1045,7 +954,6 @@ class WordBattleClient {
 
     // 显示游戏结果
     showGameResults(results) {
-        // 通知服务器玩家已完成游戏
         this.socket.emit('game_completed', {
             playerId: this.playerId,
             roomId: this.currentRoom
@@ -1067,23 +975,18 @@ class WordBattleClient {
 
     // 显示预加载页面
     showPreloadView(data) {
-        // 隐藏其他视图
         document.getElementById('lobby').classList.add('hidden');
         document.getElementById('roomView').classList.add('hidden');
         document.getElementById('gameView').classList.add('hidden');
         
-        // 显示预加载视图
         const preloadView = document.getElementById('preloadView');
         preloadView.classList.remove('hidden');
         
-        // 更新图片数量信息
         document.getElementById('preloadImageCount').textContent = 
             `正在加载 ${data.totalImages} 张图片...`;
         
-        // 初始化玩家进度显示
         this.updatePreloadProgress({ players: data.players });
         
-        // 开始预加载图片
         this.startImagePreload(data.images);
     }
 
@@ -1117,7 +1020,6 @@ class WordBattleClient {
         const totalImages = images.length;
         const imageCache = [];
 
-        // 并行加载所有图片
         const loadPromises = images.map((imageName, index) => {
             return new Promise((resolve) => {
                 const img = new Image();
@@ -1125,7 +1027,6 @@ class WordBattleClient {
                     loadedCount++;
                     imageCache.push(img);
                     
-                    // 上报进度
                     this.socket.emit('preload_progress', {
                         playerId: this.playerId,
                         roomId: this.currentRoom,
@@ -1139,7 +1040,6 @@ class WordBattleClient {
                     console.warn(`图片加载失败: ${imageName}`);
                     loadedCount++;
                     
-                    // 即使失败也要上报进度
                     this.socket.emit('preload_progress', {
                         playerId: this.playerId,
                         roomId: this.currentRoom,
@@ -1153,12 +1053,10 @@ class WordBattleClient {
             });
         });
 
-        // 等待所有图片加载完成
         try {
             await Promise.all(loadPromises);
             console.log(`预加载完成: ${loadedCount}/${totalImages} 张图片`);
             
-            // 保存图片缓存供游戏使用
             this.imageCache = imageCache;
         } catch (error) {
             console.error('预加载过程中出现错误:', error);
@@ -1167,7 +1065,6 @@ class WordBattleClient {
 
     // 显示所有玩家的最终成绩
     showAllPlayersResults(results) {
-        // 获取或创建结果容器
         let resultsContainer = document.querySelector('.results-container');
         if (!resultsContainer) {
             resultsContainer = document.createElement('div');
@@ -1175,7 +1072,6 @@ class WordBattleClient {
             document.getElementById('gameView').appendChild(resultsContainer);
         }
 
-        // 移除可能已存在的所有玩家成绩和返回按钮
         const existingResults = resultsContainer.querySelector('.all-players-results');
         if (existingResults) {
             existingResults.remove();
@@ -1185,11 +1081,9 @@ class WordBattleClient {
             existingButton.remove();
         }
         
-        // 创建所有玩家成绩表格
         let allPlayersHtml = '<div class="all-players-results"><h3>所有玩家成绩</h3><table>';
         allPlayersHtml += '<tr><th>玩家</th><th>用时(秒)</th><th>正确率</th><th>答对题数</th></tr>';
         
-        // 按完成时间排序
         const sortedPlayers = Object.entries(results).sort((a, b) => a[1].totalTime - b[1].totalTime);
         
         sortedPlayers.forEach(([playerId, data]) => {
@@ -1206,7 +1100,6 @@ class WordBattleClient {
         allPlayersHtml += '</table></div>';
         resultsContainer.insertAdjacentHTML('beforeend', allPlayersHtml);
         
-        // 添加返回房间按钮
         const returnButton = document.createElement('button');
         returnButton.textContent = '返回房间';
         returnButton.className = 'restart-button';

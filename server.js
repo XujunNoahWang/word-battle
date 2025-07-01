@@ -8,64 +8,42 @@ const axios = require('axios');
 
 const app = express();
 const server = http.createServer(app);
-
-// Unsplash API配置
 const UNSPLASH_API_KEY = 'GBayXIrx01WPNmvZGein21eq_e1SQPk-m5lH6xddfGI';
 const UNSPLASH_API_URL = 'https://api.unsplash.com';
 
-// 中间件
 app.use(cors());
 app.use(express.json());
 
-// 确保data目录存在
 const dataDir = path.join(__dirname, 'data');
-if (!fs.existsSync(dataDir)) {
-  fs.mkdirSync(dataDir);
-}
-
-// 确保images目录存在
 const imagesDir = path.join(dataDir, 'images');
-if (!fs.existsSync(imagesDir)) {
-  fs.mkdirSync(imagesDir);
-}
-
-// 确保wordlist.json文件存在
 const wordlistPath = path.join(dataDir, 'wordlist.json');
+
+[dataDir, imagesDir].forEach(dir => {
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+});
+
 if (!fs.existsSync(wordlistPath)) {
   fs.writeFileSync(wordlistPath, JSON.stringify({ words: [] }));
 }
 
-// 从Unsplash获取图片
 async function getImageFromUnsplash(word) {
   try {
     const response = await axios.get(`${UNSPLASH_API_URL}/search/photos`, {
-      headers: {
-        'Authorization': `Client-ID ${UNSPLASH_API_KEY}`
-      },
-      params: {
-        query: word,
-        per_page: 1
-      }
+      headers: { 'Authorization': `Client-ID ${UNSPLASH_API_KEY}` },
+      params: { query: word, per_page: 1 }
     });
-
-    if (response.data.results && response.data.results.length > 0) {
-      return response.data.results[0].urls.regular;
-    }
-    return null;
+    return response.data.results?.[0]?.urls.regular || null;
   } catch (error) {
     console.error('获取Unsplash图片失败:', error.message);
     return null;
   }
 }
 
-// 下载图片
 async function downloadImage(url, word) {
   try {
-    const response = await axios({
-      url,
-      responseType: 'arraybuffer'
-    });
-
+    const response = await axios({ url, responseType: 'arraybuffer' });
     const imagePath = path.join(imagesDir, `${word}.jpg`);
     fs.writeFileSync(imagePath, response.data);
     return true;
@@ -75,7 +53,6 @@ async function downloadImage(url, word) {
   }
 }
 
-// API路由：获取单词列表
 app.get('/api/words', (req, res) => {
   try {
     const data = JSON.parse(fs.readFileSync(wordlistPath, 'utf8'));
@@ -85,7 +62,6 @@ app.get('/api/words', (req, res) => {
   }
 });
 
-// API路由：添加新单词
 app.post('/api/words', async (req, res) => {
   try {
     const { word } = req.body;
@@ -97,12 +73,10 @@ app.post('/api/words', async (req, res) => {
     const normalizedWord = word.toLowerCase();
     
     if (!data.words.includes(normalizedWord)) {
-      // 保存单词
       data.words.push(normalizedWord);
       data.words.sort();
       fs.writeFileSync(wordlistPath, JSON.stringify(data, null, 2));
       
-      // 发送单词保存成功的响应
       res.json({ 
         success: true, 
         words: data.words,
@@ -110,24 +84,14 @@ app.post('/api/words', async (req, res) => {
         imageStatus: 'pending'
       });
 
-      // 异步下载图片
       const imageUrl = await getImageFromUnsplash(normalizedWord);
       if (imageUrl) {
         const downloaded = await downloadImage(imageUrl, normalizedWord);
-        // 通过WebSocket通知客户端图片下载状态
-        if (downloaded) {
-          io.emit('image_downloaded', {
-            word: normalizedWord,
-            success: true,
-            message: '图片下载成功'
-          });
-        } else {
-          io.emit('image_downloaded', {
-            word: normalizedWord,
-            success: false,
-            message: '图片下载失败'
-          });
-        }
+        io.emit('image_downloaded', {
+          word: normalizedWord,
+          success: downloaded,
+          message: downloaded ? '图片下载成功' : '图片下载失败'
+        });
       } else {
         io.emit('image_downloaded', {
           word: normalizedWord,
@@ -143,7 +107,6 @@ app.post('/api/words', async (req, res) => {
   }
 });
 
-// API路由：删除单词
 app.delete('/api/words/:word', (req, res) => {
   try {
     const wordToDelete = req.params.word.toLowerCase();
@@ -151,11 +114,9 @@ app.delete('/api/words/:word', (req, res) => {
     const index = data.words.indexOf(wordToDelete);
     
     if (index > -1) {
-      // 删除单词
       data.words.splice(index, 1);
       fs.writeFileSync(wordlistPath, JSON.stringify(data, null, 2));
       
-      // 删除对应的图片
       const imagePath = path.join(imagesDir, `${wordToDelete}.jpg`);
       if (fs.existsSync(imagePath)) {
         fs.unlinkSync(imagePath);
@@ -170,16 +131,13 @@ app.delete('/api/words/:word', (req, res) => {
   }
 });
 
-// 静态文件服务
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/data/images', express.static(path.join(__dirname, 'data', 'images')));
 
-// 处理所有其他路由，返回index.html
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// 设置Socket.IO
 const io = socketIo(server, {
   cors: {
     origin: "*",
@@ -187,17 +145,15 @@ const io = socketIo(server, {
   }
 });
 
-// 读取单词列表
 const wordlist = JSON.parse(fs.readFileSync('data/wordlist.json', 'utf8')).words;
 
-// 玩家状态枚举
 const PLAYER_STATUS = {
-  IDLE: 'idle',           // 空闲（在大厅中）
-  IN_ROOM: 'in_room',     // 在房间中（准备状态）
-  PRELOADING: 'preloading', // 预加载中
-  IN_GAME: 'in_game',     // 在游戏中
-  IN_RESULT: 'in_result', // 在结果页面中
-  OFFLINE: 'offline'      // 离线
+  IDLE: 'idle',
+  IN_ROOM: 'in_room',
+  PRELOADING: 'preloading',
+  IN_GAME: 'in_game',
+  IN_RESULT: 'in_result',
+  OFFLINE: 'offline'
 };
 
 // 游戏状态管理
