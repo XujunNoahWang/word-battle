@@ -185,19 +185,9 @@ class WordBattleClient {
 
     // 获取状态文本
     getStatusText(status) {
-        if (!window.i18n) {
-            // 回退到中文
-            switch(status) {
-                case 'idle': return '空闲';
-                case 'in_room': return '房间中';
-                case 'preloading': return '加载中';
-                case 'in_game': return '游戏中';
-                case 'in_result': return '结算中';
-                case 'offline': return '离线';
-                default: return '未知';
-            }
-        }
-        return window.i18n.t(`status.${status}`);
+        // 将下划线格式转换为驼峰格式
+        const camelCase = status.replace(/_([a-z])/g, g => g[1].toUpperCase());
+        return i18n.t(`status.${camelCase}`);
     }
 
     // 验证密码
@@ -288,26 +278,7 @@ class WordBattleClient {
         });
 
         this.socket.on('room_dissolved', (data) => {
-            if (this.gameState.rooms[this.currentRoom]) {
-                delete this.gameState.rooms[this.currentRoom];
-            }
-            
-            if (this.gameState.players[this.playerId]) {
-                this.gameState.players[this.playerId].status = 'idle';
-                this.gameState.players[this.playerId].room = null;
-            }
-
-            this.currentRoom = null;
-
-            document.getElementById('lobby').classList.remove('hidden');
-            document.getElementById('roomView').classList.add('hidden');
-            document.getElementById('preloadView').classList.add('hidden');
-            document.getElementById('gameView').classList.add('hidden');
-
-            this.updateRoomsDisplay();
-            this.updatePlayersDisplay();
-            
-            this.showNotification('notifications.roomDissolved', data.message || `${data.roomName}房间已解散`, 'warning');
+            this.handleRoomDissolved(data);
         });
 
         this.socket.on('connect_error', (error) => {
@@ -553,7 +524,11 @@ class WordBattleClient {
             playerId: this.playerId
         });
 
-        this.showNotification('创建房间', '房间创建成功', 'success');
+        this.showNotification(
+            i18n.t('lobby.createRoom'),
+            i18n.t('notifications.roomCreated'),
+            'success'
+        );
     }
 
     // 加入房间
@@ -598,6 +573,19 @@ class WordBattleClient {
         this.showNotification('加入房间', `已加入${hostPlayer.name}的房间`, 'success');
     }
 
+    // 处理房间解散事件
+    handleRoomDissolved(data) {
+        if (this.currentRoom) {
+            this.currentRoom = null;
+            this.showLobby();
+            this.showNotification(
+                i18n.t('notifications.roomDissolved'),
+                data.message || i18n.t('notifications.roomDissolvedDetail', { roomName: data.roomName }),
+                'warning'
+            );
+        }
+    }
+
     // 离开房间
     leaveRoom() {
         if (!this.currentRoom) return;
@@ -605,7 +593,11 @@ class WordBattleClient {
         this.socket.emit('leave_room', this.playerId);
         this.currentRoom = null;
         this.showLobby();
-        this.showNotification('离开房间', '已返回游戏大厅', 'success');
+        this.showNotification(
+            i18n.t('room.leaveRoom'),
+            i18n.t('notifications.returnToLobby'),
+            'success'
+        );
     }
 
     // 开始游戏
@@ -1063,12 +1055,12 @@ class WordBattleClient {
         const gameView = document.getElementById('gameView');
         gameView.innerHTML = `
             <div class="results-container">
-                <h2>游戏结束</h2>
+                <h2>${i18n.t('game.gameOver')}</h2>
                 <div class="personal-result">
-                    <h3>你的成绩</h3>
-                    <p>用时: ${results.totalTime.toFixed(1)} 秒</p>
-                    <p>正确率: ${results.accuracy.toFixed(1)}%</p>
-                    <p>答对题数: ${results.correctAnswers}/${results.totalQuestions}</p>
+                    <h3>${i18n.t('game.finalResults')}</h3>
+                    <p>${i18n.t('game.totalTime', { time: results.totalTime.toFixed(1) })}</p>
+                    <p>${i18n.t('game.accuracy', { accuracy: results.accuracy.toFixed(1) })}</p>
+                    <p>${i18n.t('game.score', { score: `${results.correctAnswers}/${results.totalQuestions}` })}</p>
                 </div>
             </div>
         `;
@@ -1182,8 +1174,13 @@ class WordBattleClient {
             existingButton.remove();
         }
         
-        let allPlayersHtml = '<div class="all-players-results"><h3>所有玩家成绩</h3><table>';
-        allPlayersHtml += '<tr><th>玩家</th><th>用时(秒)</th><th>正确率</th><th>答对题数</th></tr>';
+        let allPlayersHtml = `<div class="all-players-results"><h3>${i18n.t('game.playerRanking')}</h3><table>`;
+        allPlayersHtml += `<tr>
+            <th>${i18n.t('common.player')}</th>
+            <th>${i18n.t('game.timeColumn')}</th>
+            <th>${i18n.t('game.accuracyColumn')}</th>
+            <th>${i18n.t('game.scoreColumn')}</th>
+        </tr>`;
         
         const sortedPlayers = Object.entries(results).sort((a, b) => a[1].totalTime - b[1].totalTime);
         
@@ -1202,7 +1199,7 @@ class WordBattleClient {
         resultsContainer.insertAdjacentHTML('beforeend', allPlayersHtml);
         
         const returnButton = document.createElement('button');
-        returnButton.textContent = '返回房间';
+        returnButton.textContent = i18n.t('game.returnToRoom');
         returnButton.className = 'restart-button';
         returnButton.onclick = () => {
             this.returnToRoom();

@@ -28,18 +28,32 @@ class I18n {
 
     // 获取翻译文本
     t(key, params = {}) {
+        if (!key) {
+            console.warn('翻译键为空');
+            return '';
+        }
+
         const keys = key.split('.');
         let value = this.translations[this.currentLanguage];
         
+        if (!value) {
+            console.warn(`当前语言 ${this.currentLanguage} 的翻译数据不存在`);
+            return key;
+        }
+        
         for (const k of keys) {
             value = value?.[k];
+            if (!value) break;
         }
         
         if (!value) {
             // 如果当前语言没有翻译，尝试使用中文
             value = this.translations.zh;
-            for (const k of keys) {
-                value = value?.[k];
+            if (value) {
+                for (const k of keys) {
+                    value = value?.[k];
+                    if (!value) break;
+                }
             }
         }
         
