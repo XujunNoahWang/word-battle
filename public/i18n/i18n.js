@@ -1,4 +1,4 @@
-// 国际化核心系统
+﻿// 鍥介檯鍖栨牳蹇冪郴缁?
 class I18n {
     constructor() {
         this.currentLanguage = localStorage.getItem('word_battle_language') || 'zh';
@@ -9,27 +9,27 @@ class I18n {
     }
 
     init() {
-        // 加载翻译数据
+        // 鍔犺浇缈昏瘧鏁版嵁
         this.loadTranslations();
-        // 应用当前语言
+        // 搴旂敤褰撳墠璇█
         this.applyLanguage();
     }
 
     loadTranslations() {
-        // 翻译数据已通过 translations.js 脚本加载到全局变量中
+        // 缈昏瘧鏁版嵁宸查€氳繃 translations.js 鑴氭湰鍔犺浇鍒板叏灞€鍙橀噺涓?
         if (window.translations) {
             this.translations = window.translations;
         } else {
-            console.error('翻译数据未加载');
-            // 使用默认翻译
+            console.error('缈昏瘧鏁版嵁鏈姞杞?);
+            // 浣跨敤榛樿缈昏瘧
             this.translations = { zh: {}, en: {} };
         }
     }
 
-    // 获取翻译文本
+    // 鑾峰彇缈昏瘧鏂囨湰
     t(key, params = {}) {
         if (!key) {
-            console.warn('翻译键为空');
+            console.warn('缈昏瘧閿负绌?);
             return '';
         }
 
@@ -37,7 +37,7 @@ class I18n {
         let value = this.translations[this.currentLanguage];
         
         if (!value) {
-            console.warn(`当前语言 ${this.currentLanguage} 的翻译数据不存在`);
+            console.warn(`褰撳墠璇█ ${this.currentLanguage} 鐨勭炕璇戞暟鎹笉瀛樺湪`);
             return key;
         }
         
@@ -47,7 +47,7 @@ class I18n {
         }
         
         if (!value) {
-            // 如果当前语言没有翻译，尝试使用中文
+            // 濡傛灉褰撳墠璇█娌℃湁缈昏瘧锛屽皾璇曚娇鐢ㄤ腑鏂?
             value = this.translations.zh;
             if (value) {
                 for (const k of keys) {
@@ -58,38 +58,38 @@ class I18n {
         }
         
         if (!value) {
-            console.warn(`翻译缺失: ${key}`);
+            console.warn(`缈昏瘧缂哄け: ${key}`);
             return key;
         }
         
-        // 参数替换
+        // 鍙傛暟鏇挎崲
         return this.interpolate(value, params);
     }
 
-    // 参数插值
+    // 鍙傛暟鎻掑€?
     interpolate(text, params) {
         return text.replace(/\{(\w+)\}/g, (match, key) => {
             return params[key] !== undefined ? params[key] : match;
         });
     }
 
-    // 切换语言
+    // 鍒囨崲璇█
     switchLanguage(lang) {
         if (this.currentLanguage === lang) return;
         
         this.currentLanguage = lang;
         localStorage.setItem('word_battle_language', lang);
         
-        // 通知所有观察者
+        // 閫氱煡鎵€鏈夎瀵熻€?
         this.notifyObservers();
         
-        // 应用新语言
+        // 搴旂敤鏂拌瑷€
         this.applyLanguage();
     }
 
-    // 应用语言到页面
+    // 搴旂敤璇█鍒伴〉闈?
     applyLanguage() {
-        // 更新所有带有 data-i18n 属性的元素
+        // 鏇存柊鎵€鏈夊甫鏈?data-i18n 灞炴€х殑鍏冪礌
         document.querySelectorAll('[data-i18n]').forEach(element => {
             const key = element.getAttribute('data-i18n');
             const text = this.t(key);
@@ -105,26 +105,26 @@ class I18n {
             }
         });
 
-        // 更新带有 data-i18n-title 属性的元素的 title
+        // 鏇存柊甯︽湁 data-i18n-title 灞炴€х殑鍏冪礌鐨?title
         document.querySelectorAll('[data-i18n-title]').forEach(element => {
             const key = element.getAttribute('data-i18n-title');
             element.title = this.t(key);
         });
 
-        // 更新带有 data-i18n-html 属性的元素的 innerHTML
+        // 鏇存柊甯︽湁 data-i18n-html 灞炴€х殑鍏冪礌鐨?innerHTML
         document.querySelectorAll('[data-i18n-html]').forEach(element => {
             const key = element.getAttribute('data-i18n-html');
             element.innerHTML = this.t(key);
         });
 
-        // 更新页面标题
+        // 鏇存柊椤甸潰鏍囬
         document.title = this.t('common.pageTitle');
         
-        // 更新语言切换按钮状态
+        // 鏇存柊璇█鍒囨崲鎸夐挳鐘舵€?
         this.updateLanguageSwitcher();
     }
 
-    // 更新语言切换按钮
+    // 鏇存柊璇█鍒囨崲鎸夐挳
     updateLanguageSwitcher() {
         const switcher = document.getElementById('languageSwitcher');
         if (switcher) {
@@ -132,26 +132,26 @@ class I18n {
             const otherLang = switcher.querySelector('.other-lang');
             
             if (this.currentLanguage === 'zh') {
-                currentLang.textContent = '中';
+                currentLang.textContent = '涓?;
                 otherLang.textContent = 'EN';
             } else {
                 currentLang.textContent = 'EN';
-                otherLang.textContent = '中';
+                otherLang.textContent = '涓?;
             }
         }
     }
 
-    // 添加观察者
+    // 娣诲姞瑙傚療鑰?
     addObserver(callback) {
         this.observers.push(callback);
     }
 
-    // 移除观察者
+    // 绉婚櫎瑙傚療鑰?
     removeObserver(callback) {
         this.observers = this.observers.filter(obs => obs !== callback);
     }
 
-    // 通知观察者
+    // 閫氱煡瑙傚療鑰?
     notifyObservers() {
         this.observers.forEach(callback => {
             try {
@@ -162,31 +162,31 @@ class I18n {
         });
     }
 
-    // 获取当前语言
+    // 鑾峰彇褰撳墠璇█
     getCurrentLanguage() {
         return this.currentLanguage;
     }
 
-    // 格式化数字（根据语言环境）
+    // 鏍煎紡鍖栨暟瀛楋紙鏍规嵁璇█鐜锛?
     formatNumber(number) {
         return new Intl.NumberFormat(this.currentLanguage === 'zh' ? 'zh-CN' : 'en-US').format(number);
     }
 
-    // 格式化时间（根据语言环境）
+    // 鏍煎紡鍖栨椂闂达紙鏍规嵁璇█鐜锛?
     formatTime(seconds) {
         const minutes = Math.floor(seconds / 60);
         const remainingSeconds = Math.floor(seconds % 60);
         
         if (this.currentLanguage === 'zh') {
-            return `${minutes}分${remainingSeconds}秒`;
+            return `${minutes}鍒?{remainingSeconds}绉抈;
         } else {
             return `${minutes}m ${remainingSeconds}s`;
         }
     }
 }
 
-// 确保在页面加载完成后初始化
+// 纭繚鍦ㄩ〉闈㈠姞杞藉畬鎴愬悗鍒濆鍖?
 document.addEventListener('DOMContentLoaded', () => {
-    // 创建全局实例
+    // 鍒涘缓鍏ㄥ眬瀹炰緥
     window.i18n = new I18n();
 }); 
