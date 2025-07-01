@@ -295,7 +295,17 @@ io.on('connection', (socket) => {
 
   // 创建房间
   socket.on('create_room', (data) => {
+    if (!data || typeof data !== 'object') {
+      console.error('create_room: 无效的数据格式');
+      return;
+    }
+    
     const { playerId } = data;
+    if (!playerId) {
+      console.error('create_room: 缺少playerId');
+      return;
+    }
+    
     const player = gameState.players[playerId];
     
     if (!player) return;
@@ -332,7 +342,17 @@ io.on('connection', (socket) => {
 
   // 加入房间
   socket.on('join_room', (data) => {
+    if (!data || typeof data !== 'object') {
+      console.error('join_room: 无效的数据格式');
+      return;
+    }
+    
     const { playerId, roomId } = data;
+    if (!playerId || !roomId) {
+      console.error('join_room: 缺少必要参数');
+      return;
+    }
+    
     const player = gameState.players[playerId];
     const room = gameState.rooms[roomId];
     
@@ -371,7 +391,17 @@ io.on('connection', (socket) => {
 
   // 处理游戏开始
   socket.on('start_game', (data) => {
+    if (!data || typeof data !== 'object') {
+      console.error('start_game: 无效的数据格式');
+      return;
+    }
+    
     const { playerId, roomId } = data;
+    if (!playerId || !roomId) {
+      console.error('start_game: 缺少必要参数');
+      return;
+    }
+    
     const room = gameState.rooms[roomId];
     
     if (!room || room.host !== playerId) return;

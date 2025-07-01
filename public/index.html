@@ -13,7 +13,7 @@
     <div id="loading" class="loading-screen">
         <div class="loading-content">
             <div class="loading-spinner"></div>
-            <p>连接中...</p>
+            <p data-i18n="common.loading">连接中...</p>
         </div>
     </div>
 
@@ -32,13 +32,13 @@
             <div class="content-grid">
                 <section class="panel players-panel">
                     <div class="panel-header">
-                        <h2>在线玩家</h2>
+                        <h2 data-i18n="lobby.onlinePlayers">在线玩家</h2>
                         <span class="count-badge" id="playersCount">0</span>
                     </div>
                     <div class="panel-content">
                         <div class="players-list" id="playersList">
                             <div class="empty-state">
-                                <p>暂无其他玩家在线</p>
+                                <p data-i18n="lobby.noPlayers">暂无其他玩家在线</p>
                             </div>
                         </div>
                     </div>
@@ -46,16 +46,16 @@
 
                 <section class="panel rooms-panel">
                     <div class="panel-header">
-                        <h2>游戏房间</h2>
-                        <button class="btn btn-primary" id="createRoomBtn">
-                            <span>创建房间</span>
+                        <h2 data-i18n="lobby.gameRooms">游戏房间</h2>
+                        <button class="btn btn-primary" id="createRoomBtn" data-i18n-title="tooltips.createRoom">
+                            <span data-i18n="lobby.createRoom">创建房间</span>
                         </button>
                     </div>
                     <div class="panel-content">
                         <div class="rooms-list" id="roomsList">
                             <div class="empty-state">
-                                <p>暂无活动房间</p>
-                                <p class="hint">点击"创建房间"开始游戏</p>
+                                <p data-i18n="lobby.noRooms">暂无活动房间</p>
+                                <p class="hint" data-i18n="lobby.noRoomsHint">点击"创建房间"开始游戏</p>
                             </div>
                         </div>
                     </div>
@@ -63,6 +63,13 @@
             </div>
             <button class="add-word-btn" id="addWordBtn">
                 <span>+</span>
+            </button>
+            
+            <!-- 语言切换按钮 -->
+            <button class="language-switcher" id="languageSwitcher" data-i18n-title="tooltips.languageSwitch">
+                <span class="current-lang">中</span>
+                <span class="switch-arrow">⇄</span>
+                <span class="other-lang">EN</span>
             </button>
         </main>
 
@@ -75,8 +82,8 @@
                             <span class="room-status">等待玩家加入...</span>
                         </div>
                         <div class="room-actions">
-                            <button class="btn btn-secondary" id="leaveRoomBtn">退出房间</button>
-                            <button class="btn btn-primary hidden" id="startGameBtn">开始游戏</button>
+                            <button class="btn btn-secondary" id="leaveRoomBtn" data-i18n="room.leaveRoom">退出房间</button>
+                            <button class="btn btn-primary hidden" id="startGameBtn" data-i18n="room.startGame">开始游戏</button>
                         </div>
                     </div>
                     <div class="room-card-content">
@@ -93,13 +100,13 @@
             <main class="preload-content">
                 <div class="preload-container">
                     <div class="preload-header">
-                        <h2>正在加载游戏资源</h2>
-                        <p class="preload-subtitle">请等待所有玩家完成加载...</p>
+                        <h2 data-i18n="preload.title">正在加载游戏资源</h2>
+                        <p class="preload-subtitle" data-i18n="preload.subtitle">请等待所有玩家完成加载...</p>
                     </div>
                     <div class="preload-players" id="preloadPlayers"></div>
                     <div class="preload-footer">
                         <div class="preload-info">
-                            <span id="preloadImageCount">正在加载图片...</span>
+                            <span id="preloadImageCount" data-i18n="preload.loadingImages">正在加载图片...</span>
                         </div>
                     </div>
                 </div>
@@ -120,18 +127,18 @@
         <div class="word-manager hidden" id="wordManager">
             <div class="word-manager-content">
                 <div class="word-manager-header">
-                    <h2>单词管理</h2>
-                    <button class="btn btn-secondary" id="closeWordManager">返回</button>
+                    <h2 data-i18n="wordManager.title">单词管理</h2>
+                    <button class="btn btn-secondary" id="closeWordManager" data-i18n="common.back">返回</button>
                 </div>
                 <div class="word-input-section">
                     <div class="input-group">
-                        <input type="text" id="wordInput" placeholder="输入英语单词" maxlength="50">
-                        <button class="btn btn-primary" id="addWordToList">添加</button>
+                        <input type="text" id="wordInput" data-i18n="wordManager.addWord" placeholder="输入英语单词" maxlength="50">
+                        <button class="btn btn-primary" id="addWordToList" data-i18n="wordManager.addButton">添加</button>
                     </div>
                 </div>
                 <div class="word-list-section">
                     <div class="word-list-header">
-                        <h3>单词库</h3>
+                        <h3 data-i18n="wordManager.wordLibrary">单词库</h3>
                         <span class="count-badge" id="wordCount">0</span>
                     </div>
                     <div class="word-list" id="wordList"></div>
@@ -142,26 +149,26 @@
 
     <div class="modal hidden" id="editNameModal">
         <div class="modal-content">
-            <h2>修改用户名</h2>
+            <h2 data-i18n="modal.editName">修改用户名</h2>
             <div class="modal-body">
-                <input type="text" id="newNameInput" placeholder="输入新的用户名" maxlength="20">
+                <input type="text" id="newNameInput" data-i18n="modal.newName" placeholder="输入新的用户名" maxlength="20">
             </div>
             <div class="modal-footer">
-                <button class="btn btn-secondary" id="cancelEditName">取消</button>
-                <button class="btn btn-primary" id="confirmEditName">确认</button>
+                <button class="btn btn-secondary" id="cancelEditName" data-i18n="common.cancel">取消</button>
+                <button class="btn btn-primary" id="confirmEditName" data-i18n="common.confirm">确认</button>
             </div>
         </div>
     </div>
 
     <div class="modal hidden" id="passwordModal">
         <div class="modal-content">
-            <h2>管理员验证</h2>
+            <h2 data-i18n="modal.adminVerification">管理员验证</h2>
             <div class="modal-body">
-                <input type="password" id="passwordInput" placeholder="请输入4位数字密码" maxlength="4" pattern="[0-9]*" inputmode="numeric">
+                <input type="password" id="passwordInput" data-i18n="modal.enterPassword" placeholder="请输入4位数字密码" maxlength="4" pattern="[0-9]*" inputmode="numeric">
             </div>
             <div class="modal-footer">
-                <button class="btn btn-secondary" id="cancelPassword">取消</button>
-                <button class="btn btn-primary" id="confirmPassword">确认</button>
+                <button class="btn btn-secondary" id="cancelPassword" data-i18n="common.cancel">取消</button>
+                <button class="btn btn-primary" id="confirmPassword" data-i18n="common.confirm">确认</button>
             </div>
         </div>
     </div>
@@ -169,6 +176,8 @@
     <div class="notification-container" id="notificationContainer"></div>
 
     <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
+    <script src="i18n/i18n.js"></script>
+    <script src="i18n/translations.js"></script>
     <script src="script.js"></script>
 </body>
 </html> 

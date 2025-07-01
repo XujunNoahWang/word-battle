@@ -915,6 +915,62 @@ body {
     background-color: #0056b3;
 }
 
+/* 语言切换按钮 */
+.language-switcher {
+    position: fixed;
+    bottom: var(--spacing-lg);
+    left: var(--spacing-lg);
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-sm) var(--spacing-md);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: var(--shadow-md);
+    backdrop-filter: blur(10px);
+    z-index: 1000;
+    min-width: 80px;
+    justify-content: center;
+}
+
+.language-switcher:hover {
+    background: var(--bg-secondary);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--primary-color);
+}
+
+.language-switcher:active {
+    transform: translateY(0);
+    box-shadow: var(--shadow-md);
+}
+
+.language-switcher .current-lang {
+    color: var(--primary-color);
+    font-weight: 600;
+}
+
+.language-switcher .switch-arrow {
+    color: var(--text-secondary);
+    font-size: 12px;
+    transition: transform 0.2s ease;
+}
+
+.language-switcher:hover .switch-arrow {
+    transform: scaleX(-1);
+}
+
+.language-switcher .other-lang {
+    color: var(--text-secondary);
+    font-size: var(--font-size-xs);
+}
+
 /* 单词管理页面 */
 .word-manager {
     position: fixed;

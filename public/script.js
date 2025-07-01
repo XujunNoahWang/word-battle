@@ -23,6 +23,7 @@ class WordBattleClient {
     init() {
         this.setupUI();
         this.setupWordManager();
+        this.setupLanguageSwitcher();
         this.connectToServer();
     }
 
@@ -102,6 +103,103 @@ class WordBattleClient {
         });
     }
 
+    // 设置语言切换功能
+    setupLanguageSwitcher() {
+        const languageSwitcher = document.getElementById('languageSwitcher');
+        if (languageSwitcher) {
+            languageSwitcher.addEventListener('click', () => {
+                this.switchLanguage();
+            });
+        }
+
+        // 监听语言变化
+        if (window.i18n) {
+            window.i18n.addObserver((newLanguage) => {
+                this.onLanguageChanged(newLanguage);
+            });
+        }
+    }
+
+    // 切换语言
+    switchLanguage() {
+        if (!window.i18n) return;
+        
+        const currentLang = window.i18n.getCurrentLanguage();
+        const newLang = currentLang === 'zh' ? 'en' : 'zh';
+        
+        window.i18n.switchLanguage(newLang);
+    }
+
+    // 语言变化回调
+    onLanguageChanged(newLanguage) {
+        // 保存当前玩家名称
+        const currentPlayer = this.gameState.players[this.playerId];
+        const playerName = currentPlayer ? currentPlayer.name : this.playerId;
+        
+        // 更新动态内容
+        this.updateDynamicContent();
+        
+        // 重新渲染玩家列表和房间列表
+        this.updatePlayersDisplay();
+        this.updateRoomsDisplay();
+        
+        // 如果在房间中，更新房间视图
+        if (this.currentRoom) {
+            this.updateRoomView();
+        }
+        
+        // 确保玩家名称显示正确
+        this.updatePlayerBadge(playerName);
+    }
+
+    // 更新动态内容
+    updateDynamicContent() {
+        // 更新玩家数量显示
+        const playersCount = Object.keys(this.gameState.players).length;
+        const playersCountElement = document.getElementById('playersCount');
+        if (playersCountElement && window.i18n) {
+            playersCountElement.textContent = window.i18n.t('lobby.playersCount', { count: playersCount });
+        }
+
+        // 更新预加载进度文本
+        const preloadImageCount = document.getElementById('preloadImageCount');
+        if (preloadImageCount && window.i18n) {
+            preloadImageCount.textContent = window.i18n.t('preload.loadingImages');
+        }
+
+        // 更新创建房间按钮
+        this.updateCreateRoomButton();
+
+        // 更新玩家徽章的tooltip
+        const playerBadge = document.getElementById('playerBadge');
+        if (playerBadge && window.i18n) {
+            playerBadge.title = window.i18n.t('tooltips.clickToEdit');
+        }
+
+        // 更新添加单词按钮的tooltip
+        const addWordBtn = document.getElementById('addWordBtn');
+        if (addWordBtn && window.i18n) {
+            addWordBtn.title = window.i18n.t('tooltips.addWords');
+        }
+    }
+
+    // 获取状态文本
+    getStatusText(status) {
+        if (!window.i18n) {
+            // 回退到中文
+            switch(status) {
+                case 'idle': return '空闲';
+                case 'in_room': return '房间中';
+                case 'preloading': return '加载中';
+                case 'in_game': return '游戏中';
+                case 'in_result': return '结算中';
+                case 'offline': return '离线';
+                default: return '未知';
+            }
+        }
+        return window.i18n.t(`status.${status}`);
+    }
+
     // 验证密码
     verifyPassword() {
         const ADMIN_PASSWORD = '0627';
@@ -116,7 +214,7 @@ class WordBattleClient {
             document.getElementById('lobby').classList.add('hidden');
             this.loadWords();
         } else {
-            this.showNotification('错误', '密码不正确', 'error');
+            this.showNotification('common.error', 'modal.incorrectPassword', 'error');
             passwordInput.value = '';
             passwordInput.focus();
         }
@@ -209,23 +307,23 @@ class WordBattleClient {
             this.updateRoomsDisplay();
             this.updatePlayersDisplay();
             
-            this.showNotification('房间解散', `${data.roomName}房间已解散`, 'warning');
+            this.showNotification('notifications.roomDissolved', data.message || `${data.roomName}房间已解散`, 'warning');
         });
 
         this.socket.on('connect_error', (error) => {
             console.error('连接错误:', error);
-            this.showNotification('连接失败', '无法连接到服务器，请检查网络', 'error');
+            this.showNotification('notifications.connectionLost', 'notifications.connectionLost', 'error');
         });
 
         this.socket.on('disconnect', (reason) => {
             console.log('连接断开:', reason);
-            this.showNotification('连接断开', '正在尝试重新连接...', 'warning');
+            this.showNotification('notifications.connectionLost', 'notifications.connectionLost', 'warning');
         });
 
         this.socket.on('reconnect', () => {
             console.log('重新连接成功');
             this.requestIdentity();
-            this.showNotification('重新连接', '连接已恢复', 'success');
+            this.showNotification('notifications.reconnected', 'notifications.reconnected', 'success');
         });
 
         this.socket.on('image_downloaded', (data) => {
@@ -288,11 +386,13 @@ class WordBattleClient {
         
         if (currentPlayer && currentPlayer.status === 'in_room') {
             createRoomBtn.disabled = true;
-            createRoomBtn.innerHTML = '<span>已在房间中</span>';
+            const inRoomText = window.i18n ? window.i18n.t('status.inRoom') : '已在房间中';
+            createRoomBtn.innerHTML = `<span>${inRoomText}</span>`;
             createRoomBtn.classList.add('disabled');
         } else {
             createRoomBtn.disabled = false;
-            createRoomBtn.innerHTML = '<span>创建房间</span>';
+            const createText = window.i18n ? window.i18n.t('lobby.createRoom') : '创建房间';
+            createRoomBtn.innerHTML = `<span>${createText}</span>`;
             createRoomBtn.classList.remove('disabled');
         }
     }
@@ -312,9 +412,10 @@ class WordBattleClient {
         playersCount.textContent = onlinePlayers.length;
 
         if (onlinePlayers.length === 0) {
+            const emptyText = window.i18n ? window.i18n.t('lobby.noPlayers') : '暂无玩家在线';
             playersContainer.innerHTML = `
                 <div class="empty-state">
-                    <p>暂无玩家在线</p>
+                    <p>${emptyText}</p>
                 </div>
             `;
             return;
@@ -326,10 +427,10 @@ class WordBattleClient {
                 <div class="player-item ${isCurrentPlayer ? 'current-player' : ''}">
                     <span class="player-name">
                         ${player.name}
-                        ${isCurrentPlayer ? ' (你)' : ''}
+                        ${isCurrentPlayer ? (window.i18n && window.i18n.getCurrentLanguage() === 'en' ? ' (You)' : ' (你)') : ''}
                     </span>
                     <span class="player-status ${player.status}">
-                        ${player.status === 'idle' ? '空闲' : '游戏中'}
+                        ${this.getStatusText(player.status)}
                     </span>
                 </div>
             `;
@@ -344,10 +445,12 @@ class WordBattleClient {
         const isPlayerInRoom = currentPlayer && currentPlayer.status === 'in_room';
 
         if (rooms.length === 0) {
+            const noRoomsText = window.i18n ? window.i18n.t('lobby.noRooms') : '暂无活动房间';
+            const hintText = window.i18n ? window.i18n.t('lobby.noRoomsHint') : '点击"创建房间"开始游戏';
             roomsContainer.innerHTML = `
                 <div class="empty-state">
-                    <p>暂无活动房间</p>
-                    <p class="hint">点击"创建房间"开始游戏</p>
+                    <p>${noRoomsText}</p>
+                    <p class="hint">${hintText}</p>
                 </div>
             `;
             return;
@@ -359,12 +462,12 @@ class WordBattleClient {
             return `
                 <div class="room-item ${isCurrentRoom ? 'current-room' : ''}">
                     <div class="room-info">
-                        <span class="room-name">${hostPlayer.name}的房间</span>
+                        <span class="room-name">${window.i18n ? window.i18n.t('room.roomTitle', {name: hostPlayer.name}) : `${hostPlayer.name}的房间`}</span>
                         <span class="player-count">${room.players.length}人</span>
                     </div>
                     ${!isPlayerInRoom ? `
                         <button class="btn btn-primary join-room-btn" onclick="wordBattleClient.joinRoom('${room.id}').catch(console.error)">
-                            加入房间
+                            ${window.i18n ? window.i18n.t('lobby.joinRoom') : '加入房间'}
                         </button>
                     ` : ''}
                 </div>
@@ -380,30 +483,24 @@ class WordBattleClient {
         const currentPlayer = this.gameState.players[this.playerId];
         const isHost = room.host === this.playerId;
 
-        document.getElementById('roomTitle').textContent = `${this.gameState.players[room.host].name}的房间`;
-        document.getElementById('roomHostName').textContent = this.gameState.players[room.host].name;
+        const hostName = this.gameState.players[room.host].name;
+        document.getElementById('roomTitle').textContent = window.i18n ? 
+            window.i18n.t('room.roomTitle', {name: hostName}) : 
+            `${hostName}的房间`;
+        
+        const roomHostElement = document.getElementById('roomHostName');
+        if (roomHostElement) {
+            roomHostElement.textContent = window.i18n ? 
+                window.i18n.t('room.roomHost', {name: hostName}) : 
+                `房主：${hostName}`;
+        }
 
         const playersList = document.getElementById('roomPlayersList');
         playersList.innerHTML = room.players.map(playerId => {
             const player = this.gameState.players[playerId];
             let statusText = '';
             
-            switch(player.status) {
-                case 'in_room':
-                    statusText = '准备中';
-                    break;
-                case 'preloading':
-                    statusText = '预加载中';
-                    break;
-                case 'in_game':
-                    statusText = '游戏中';
-                    break;
-                case 'in_result':
-                    statusText = '查看结果中';
-                    break;
-                default:
-                    statusText = '未知状态';
-            }
+            statusText = this.getStatusText(player.status);
             
             return `
                 <div class="room-player">
@@ -423,10 +520,10 @@ class WordBattleClient {
                 
                 if (allReady) {
                     startGameBtn.disabled = false;
-                    startGameBtn.title = '开始新一轮游戏';
+                    startGameBtn.title = window.i18n ? window.i18n.t('tooltips.startGame') : '开始游戏（需要至少2名玩家）';
                 } else {
                     startGameBtn.disabled = true;
-                    startGameBtn.title = '等待所有玩家准备';
+                    startGameBtn.title = window.i18n ? window.i18n.t('room.gameStartError') : '等待所有玩家准备';
                 }
             } else {
                 startGameBtn.classList.add('hidden');
@@ -782,10 +879,14 @@ class WordBattleClient {
         const container = document.getElementById('notificationContainer');
         const notification = document.createElement('div');
         
+        // 支持国际化的标题和消息
+        const translatedTitle = window.i18n ? window.i18n.t(title) : title;
+        const translatedMessage = window.i18n ? window.i18n.t(message) : message;
+        
         notification.className = `notification ${type}`;
         notification.innerHTML = `
-            <div class="notification-title">${title}</div>
-            <div class="notification-message">${message}</div>
+            <div class="notification-title">${translatedTitle}</div>
+            <div class="notification-message">${translatedMessage}</div>
         `;
 
         container.appendChild(notification);
@@ -1132,7 +1233,17 @@ let wordBattleClient;
 
 // 页面加载完成后初始化
 document.addEventListener('DOMContentLoaded', () => {
-    wordBattleClient = new WordBattleClient();
+    // 等待 i18n 系统初始化完成
+    const initClient = () => {
+        if (window.i18n) {
+            wordBattleClient = new WordBattleClient();
+        } else {
+            // 如果 i18n 还没有准备好，稍后再试
+            setTimeout(initClient, 100);
+        }
+    };
+    
+    initClient();
 });
 
 // 页面卸载时清理
