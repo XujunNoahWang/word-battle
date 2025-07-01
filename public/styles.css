@@ -149,6 +149,33 @@ body {
     letter-spacing: -0.5px;
 }
 
+.beta-tag {
+    display: inline-block;
+    font-size: 0.4em;
+    font-weight: 600;
+    color: var(--text-white);
+    background: linear-gradient(135deg, #FF9500, #FF5E3A);
+    padding: 4px 8px;
+    border-radius: 10px;
+    margin-left: 8px;
+    vertical-align: middle;
+    text-transform: none;
+    letter-spacing: 0;
+    box-shadow: 0 2px 4px rgba(255, 94, 58, 0.2);
+    animation: fadeInScale 0.3s ease-out;
+}
+
+@keyframes fadeInScale {
+    from {
+        opacity: 0;
+        transform: scale(0.8);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
 .player-info {
     display: flex;
     align-items: center;
