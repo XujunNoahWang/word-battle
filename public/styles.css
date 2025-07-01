@@ -230,7 +230,6 @@ body {
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    min-height: 500px;
 }
 
 .panel-header {
@@ -263,6 +262,8 @@ body {
     flex: 1;
     padding: var(--spacing-lg);
     overflow-y: auto;
+    min-height: 100px;
+    max-height: 600px;
 }
 
 /* 按钮样式 */
@@ -443,8 +444,11 @@ body {
 /* 空状态 */
 .empty-state {
     text-align: center;
-    padding: var(--spacing-xxl) var(--spacing-md);
+    padding: var(--spacing-lg);
     color: var(--text-secondary);
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+    margin: var(--spacing-md) 0;
 }
 
 .empty-state p {
@@ -806,6 +810,10 @@ body {
     .notification {
         min-width: auto;
     }
+    
+    .panel-content {
+        max-height: 400px;
+    }
 }
 
 @media (max-width: 480px) {
@@ -817,8 +825,8 @@ body {
         padding: var(--spacing-md);
     }
     
-    .panel {
-        min-height: 400px;
+    .panel-content {
+        max-height: 300px;
     }
     
     .modal {
