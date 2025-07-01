@@ -1635,4 +1635,62 @@ body {
     .preload-header h2 {
         font-size: var(--font-size-lg);
     }
+}
+
+/* 底部控制栏 */
+.bottom-controls {
+    position: fixed;
+    bottom: var(--spacing-lg);
+    left: var(--spacing-lg);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    z-index: 100;
+}
+
+/* 语言切换按钮 */
+.language-switch {
+    display: flex;
+    background: var(--bg-secondary);
+    border-radius: var(--radius-lg);
+    padding: 2px;
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-sm);
+}
+
+.language-btn {
+    background: transparent;
+    border: none;
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: calc(var(--radius-lg) - 2px);
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-width: 48px;
+    text-align: center;
+}
+
+.language-btn:hover {
+    color: var(--text-primary);
+}
+
+.language-btn.active {
+    background: var(--bg-primary);
+    color: var(--primary-color);
+    box-shadow: var(--shadow-sm);
+}
+
+/* 在非大厅页面隐藏语言切换按钮 */
+.room-view .language-switch,
+.preload-view .language-switch,
+.game-view .language-switch,
+.word-manager .language-switch {
+    display: none;
+}
+
+/* 调整添加单词按钮的位置 */
+.add-word-btn {
+    margin-left: var(--spacing-md);
 } 

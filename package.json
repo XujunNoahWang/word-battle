@@ -1,7 +1,7 @@
 {
   "name": "word-battle",
-  "version": "0.3.7.0",
-  "description": "多人在线Word Battle游戏平台",
+  "version": "0.3.8.0",
+  "description": "A multiplayer word learning game",
   "main": "server.js",
   "scripts": {
     "start": "node start.js",
@@ -9,22 +9,19 @@
     "server": "node server.js",
     "stop": "taskkill /f /im node.exe || true"
   },
+  "keywords": [
+    "game",
+    "multiplayer",
+    "word",
+    "learning"
+  ],
+  "author": "Vito Wang",
+  "license": "MIT",
   "dependencies": {
-    "axios": "^1.10.0",
-    "cors": "^2.8.5",
     "express": "^4.18.2",
-    "node-fetch": "^2.7.0",
-    "socket.io": "^4.7.4"
+    "socket.io": "^4.7.2"
   },
   "devDependencies": {
     "nodemon": "^3.0.2"
-  },
-  "keywords": [
-    "websocket",
-    "multiplayer",
-    "game",
-    "realtime"
-  ],
-  "author": "Word Battle Team",
-  "license": "MIT"
+  }
 }
