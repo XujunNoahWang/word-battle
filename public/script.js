@@ -65,13 +65,38 @@ class WordBattleClient {
 
     // 单词管理相关
     setupWordManager() {
-        // 显示/隐藏单词管理页面
+        const ADMIN_PASSWORD = '0627';
+        
+        // 显示密码验证弹窗
         document.getElementById('addWordBtn').addEventListener('click', () => {
-            document.getElementById('wordManager').classList.remove('hidden');
-            document.getElementById('lobby').classList.add('hidden');
-            this.loadWords();
+            const passwordModal = document.getElementById('passwordModal');
+            const passwordInput = document.getElementById('passwordInput');
+            passwordModal.classList.remove('hidden');
+            passwordModal.classList.add('show');
+            passwordInput.value = '';
+            passwordInput.focus();
         });
 
+        // 取消密码验证
+        document.getElementById('cancelPassword').addEventListener('click', () => {
+            const passwordModal = document.getElementById('passwordModal');
+            passwordModal.classList.add('hidden');
+            passwordModal.classList.remove('show');
+        });
+
+        // 确认密码
+        document.getElementById('confirmPassword').addEventListener('click', () => {
+            this.verifyPassword();
+        });
+
+        // 密码输入框回车事件
+        document.getElementById('passwordInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                this.verifyPassword();
+            }
+        });
+
+        // 关闭单词管理页面
         document.getElementById('closeWordManager').addEventListener('click', () => {
             document.getElementById('wordManager').classList.add('hidden');
             document.getElementById('lobby').classList.remove('hidden');
@@ -87,6 +112,28 @@ class WordBattleClient {
         document.getElementById('addWordToList').addEventListener('click', () => {
             this.addWord();
         });
+    }
+
+    // 验证密码
+    verifyPassword() {
+        const ADMIN_PASSWORD = '0627';
+        const passwordModal = document.getElementById('passwordModal');
+        const passwordInput = document.getElementById('passwordInput');
+        const password = passwordInput.value;
+
+        if (password === ADMIN_PASSWORD) {
+            // 密码正确，显示单词管理页面
+            passwordModal.classList.add('hidden');
+            passwordModal.classList.remove('show');
+            document.getElementById('wordManager').classList.remove('hidden');
+            document.getElementById('lobby').classList.add('hidden');
+            this.loadWords();
+        } else {
+            // 密码错误，显示提示
+            this.showNotification('错误', '密码不正确', 'error');
+            passwordInput.value = '';
+            passwordInput.focus();
+        }
     }
 
     // 连接到服务器

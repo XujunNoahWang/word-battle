@@ -176,6 +176,20 @@
         </div>
     </div>
 
+    <!-- 密码验证弹窗 -->
+    <div class="modal hidden" id="passwordModal">
+        <div class="modal-content">
+            <h2>管理员验证</h2>
+            <div class="modal-body">
+                <input type="password" id="passwordInput" placeholder="请输入4位数字密码" maxlength="4" pattern="[0-9]*" inputmode="numeric">
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="cancelPassword">取消</button>
+                <button class="btn btn-primary" id="confirmPassword">确认</button>
+            </div>
+        </div>
+    </div>
+
     <!-- 通知系统 -->
     <div class="notification-container" id="notificationContainer"></div>
 
