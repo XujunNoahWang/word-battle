@@ -77,6 +77,9 @@ app.post('/api/words', async (req, res) => {
       data.words.sort();
       fs.writeFileSync(wordlistPath, JSON.stringify(data, null, 2));
       
+      // 重新加载单词列表到内存
+      loadWordlist();
+      
       res.json({ 
         success: true, 
         words: data.words,
@@ -117,6 +120,9 @@ app.delete('/api/words/:word', (req, res) => {
       data.words.splice(index, 1);
       fs.writeFileSync(wordlistPath, JSON.stringify(data, null, 2));
       
+      // 重新加载单词列表到内存
+      loadWordlist();
+      
       const imagePath = path.join(imagesDir, `${wordToDelete}.jpg`);
       if (fs.existsSync(imagePath)) {
         fs.unlinkSync(imagePath);
@@ -145,7 +151,23 @@ const io = socketIo(server, {
   }
 });
 
-const wordlist = JSON.parse(fs.readFileSync('data/wordlist.json', 'utf8')).words;
+// 单词列表缓存
+let wordlist = [];
+
+// 加载单词列表函数
+function loadWordlist() {
+  try {
+    const data = JSON.parse(fs.readFileSync('data/wordlist.json', 'utf8'));
+    wordlist = data.words;
+    console.log(`单词列表已加载，共 ${wordlist.length} 个单词`);
+  } catch (error) {
+    console.error('加载单词列表失败:', error);
+    wordlist = [];
+  }
+}
+
+// 初始化时加载单词列表
+loadWordlist();
 
 const PLAYER_STATUS = {
   IDLE: 'idle',
