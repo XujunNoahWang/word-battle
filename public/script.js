@@ -92,6 +92,16 @@ class WordBattleClient {
             document.getElementById('lobby').classList.remove('hidden');
         });
 
+        // 浏览单词库按钮
+        document.getElementById('browseWordsBtn').addEventListener('click', () => {
+            this.showWordLibrary();
+        });
+
+        document.getElementById('closeWordLibrary').addEventListener('click', () => {
+            document.getElementById('wordLibrary').classList.add('hidden');
+            document.getElementById('lobby').classList.remove('hidden');
+        });
+
         document.getElementById('wordInput').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
                 this.addWord();
@@ -1059,6 +1069,194 @@ class WordBattleClient {
         if (wordCountElement) {
             wordCountElement.textContent = count;
         }
+    }
+
+    // 显示单词库浏览页面
+    async showWordLibrary() {
+        try {
+            document.getElementById('lobby').classList.add('hidden');
+            document.getElementById('wordLibrary').classList.remove('hidden');
+            
+            // 初始化单词库数据
+            if (!this.wordLibraryData) {
+                await this.loadWordLibraryData();
+            }
+            
+            this.setupAlphabetNavigation();
+            this.renderWordCards();
+            this.setupInfiniteScroll();
+            this.setupBackToTop();
+            
+        } catch (error) {
+            console.error('显示单词库失败:', error);
+            this.showNotification('错误', '加载单词库失败', 'error');
+        }
+    }
+
+    // 加载单词库数据
+    async loadWordLibraryData() {
+        try {
+            const response = await fetch('/api/words');
+            const words = await response.json();
+            
+            // 按字母分组
+            this.wordLibraryData = this.groupWordsByAlphabet(words);
+            this.currentPage = 0;
+            this.wordsPerPage = 20;
+            this.isLoading = false;
+            
+        } catch (error) {
+            console.error('加载单词库数据失败:', error);
+            throw error;
+        }
+    }
+
+    // 按字母分组单词
+    groupWordsByAlphabet(words) {
+        const grouped = {};
+        const alphabet = 'abcdefghijklmnopqrstuvwxyz'.split('');
+        
+        // 初始化所有字母
+        alphabet.forEach(letter => {
+            grouped[letter] = [];
+        });
+        
+        // 分组单词
+        words.forEach(word => {
+            const firstLetter = word.charAt(0).toLowerCase();
+            if (grouped[firstLetter]) {
+                grouped[firstLetter].push(word);
+            }
+        });
+        
+        // 排序每个字母组内的单词
+        Object.keys(grouped).forEach(letter => {
+            grouped[letter].sort();
+        });
+        
+        return grouped;
+    }
+
+    // 设置字母导航
+    setupAlphabetNavigation() {
+        const container = document.querySelector('.alphabet-nav-container');
+        const alphabet = 'abcdefghijklmnopqrstuvwxyz'.split('');
+        
+        container.innerHTML = alphabet.map(letter => {
+            const hasWords = this.wordLibraryData[letter] && this.wordLibraryData[letter].length > 0;
+            const className = hasWords ? 'alphabet-btn' : 'alphabet-btn disabled';
+            
+            return `<button class="${className}" data-letter="${letter}" ${!hasWords ? 'disabled' : ''}>${letter.toUpperCase()}</button>`;
+        }).join('');
+        
+        // 添加点击事件
+        container.addEventListener('click', (e) => {
+            if (e.target.classList.contains('alphabet-btn') && !e.target.disabled) {
+                this.scrollToLetter(e.target.dataset.letter);
+                
+                // 更新激活状态
+                container.querySelectorAll('.alphabet-btn').forEach(btn => btn.classList.remove('active'));
+                e.target.classList.add('active');
+            }
+        });
+    }
+
+    // 渲染单词卡片
+    renderWordCards() {
+        const container = document.getElementById('wordCardsGrid');
+        container.innerHTML = '';
+        
+        const alphabet = 'abcdefghijklmnopqrstuvwxyz'.split('');
+        
+        alphabet.forEach(letter => {
+            const words = this.wordLibraryData[letter];
+            if (words && words.length > 0) {
+                // 添加字母分组标题
+                const sectionTitle = document.createElement('div');
+                sectionTitle.className = 'alphabet-section';
+                sectionTitle.id = `section-${letter}`;
+                sectionTitle.innerHTML = `<h3>${letter.toUpperCase()}</h3>`;
+                container.appendChild(sectionTitle);
+                
+                // 添加该字母的单词卡片
+                words.forEach(word => {
+                    const card = this.createWordCard(word);
+                    container.appendChild(card);
+                });
+            }
+        });
+    }
+
+    // 创建单词卡片
+    createWordCard(word) {
+        const card = document.createElement('div');
+        card.className = 'word-card';
+        card.innerHTML = `
+            <img class="word-card-image" 
+                 src="/data/images/${word}.jpg" 
+                 alt="${word}"
+                 onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+            <div class="word-card-placeholder" style="display: none;">⌛️</div>
+            <p class="word-card-text">${word}</p>
+        `;
+        
+        // 添加点击发音功能
+        card.addEventListener('click', async () => {
+            await this.speakWord(word);
+        });
+        
+        return card;
+    }
+
+    // 滚动到指定字母
+    scrollToLetter(letter) {
+        const section = document.getElementById(`section-${letter}`);
+        if (section) {
+            section.scrollIntoView({ 
+                behavior: 'smooth', 
+                block: 'start' 
+            });
+        }
+    }
+
+    // 设置无限滚动
+    setupInfiniteScroll() {
+        const container = document.getElementById('wordCardsContainer');
+        
+        container.addEventListener('scroll', () => {
+            if (container.scrollTop + container.clientHeight >= container.scrollHeight - 100) {
+                this.loadMoreWords();
+            }
+        });
+    }
+
+    // 加载更多单词（预留功能）
+    loadMoreWords() {
+        if (this.isLoading) return;
+        
+        // 当前实现是一次性加载所有单词，这里预留给未来优化
+        console.log('已加载所有单词');
+    }
+
+    // 设置返回顶部按钮
+    setupBackToTop() {
+        const backToTopBtn = document.getElementById('backToTop');
+        const container = document.getElementById('wordCardsContainer');
+        
+        container.addEventListener('scroll', () => {
+            if (container.scrollTop > 300) {
+                backToTopBtn.classList.remove('hidden');
+            } else {
+                backToTopBtn.classList.add('hidden');
+            }
+        });
+        
+        backToTopBtn.addEventListener('click', () => {
+            container.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
     }
 
     // 更新游戏进度显示

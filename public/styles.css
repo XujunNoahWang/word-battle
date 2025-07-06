@@ -915,6 +915,31 @@ body {
     background-color: #0056b3;
 }
 
+/* 浏览单词库按钮 */
+.browse-words-btn {
+    position: fixed;
+    bottom: 2rem;
+    right: 6.5rem;
+    width: 3.5rem;
+    height: 3.5rem;
+    border-radius: 50%;
+    background-color: #28a745;
+    color: white;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    transition: transform 0.2s, background-color 0.2s;
+}
+
+.browse-words-btn:hover {
+    transform: scale(1.1);
+    background-color: #1e7e34;
+}
+
 /* 语言切换按钮 */
 .language-switcher {
     position: fixed;
@@ -1690,5 +1715,296 @@ body {
     
     .preload-header h2 {
         font-size: var(--font-size-lg);
+    }
+}
+
+/* 单词库浏览页面样式 */
+.word-library {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: #f8f9fa;
+    z-index: 1000;
+    overflow: hidden;
+}
+
+.word-library-content {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.word-library-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 2rem;
+    background: white;
+    border-bottom: 1px solid #e0e0e0;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    z-index: 10;
+}
+
+.word-library-header h2 {
+    margin: 0;
+    color: var(--text-primary);
+    font-size: 1.5rem;
+}
+
+/* 字母导航 */
+.alphabet-nav {
+    background: white;
+    border-bottom: 1px solid #e0e0e0;
+    padding: 1rem 2rem;
+    position: sticky;
+    top: 0;
+    z-index: 9;
+}
+
+.alphabet-nav-container {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    justify-content: center;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.alphabet-btn {
+    padding: 0.5rem 0.75rem;
+    border: 1px solid #ddd;
+    background: white;
+    color: var(--text-primary);
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-weight: 500;
+    min-width: 40px;
+    text-align: center;
+}
+
+.alphabet-btn:hover {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+.alphabet-btn.active {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+.alphabet-btn.disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.alphabet-btn.disabled:hover {
+    background: white;
+    color: var(--text-primary);
+    border-color: #ddd;
+}
+
+/* 单词卡片容器 */
+.word-cards-container {
+    flex: 1;
+    overflow-y: auto;
+    padding: 2rem;
+}
+
+.word-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1.5rem;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.word-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+}
+
+.word-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+}
+
+.word-card-image {
+    width: 120px;
+    height: 120px;
+    border-radius: 8px;
+    object-fit: cover;
+    margin: 0 auto 1rem;
+    display: block;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    transition: transform 0.3s ease;
+}
+
+.word-card:hover .word-card-image {
+    transform: scale(1.05);
+}
+
+.word-card-text {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+    text-transform: lowercase;
+}
+
+.word-card-placeholder {
+    width: 120px;
+    height: 120px;
+    border-radius: 8px;
+    background: #f0f0f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1rem;
+    font-size: 2rem;
+    color: #ccc;
+}
+
+/* 字母分组标题 */
+.alphabet-section {
+    grid-column: 1 / -1;
+    margin: 2rem 0 1rem;
+    padding: 0.5rem 0;
+    border-bottom: 2px solid var(--primary-color);
+}
+
+.alphabet-section h3 {
+    margin: 0;
+    font-size: 1.5rem;
+    color: var(--primary-color);
+    text-transform: uppercase;
+    font-weight: 700;
+}
+
+/* 加载更多 */
+.loading-more {
+    text-align: center;
+    padding: 2rem;
+    color: var(--text-secondary);
+}
+
+.loading-more .loading-spinner {
+    width: 30px;
+    height: 30px;
+    margin: 0 auto 1rem;
+}
+
+/* 返回顶部按钮 */
+.back-to-top {
+    position: fixed;
+    bottom: 8rem;
+    right: 2rem;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    transition: all 0.3s ease;
+    z-index: 1000;
+}
+
+.back-to-top:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .word-cards-grid {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 1rem;
+        padding: 1rem;
+    }
+    
+    .word-card {
+        padding: 1rem;
+    }
+    
+    .word-card-image {
+        width: 80px;
+        height: 80px;
+    }
+    
+    .word-card-placeholder {
+        width: 80px;
+        height: 80px;
+        font-size: 1.5rem;
+    }
+    
+    .word-card-text {
+        font-size: 1rem;
+    }
+    
+    .alphabet-nav-container {
+        gap: 0.25rem;
+    }
+    
+    .alphabet-btn {
+        padding: 0.4rem 0.6rem;
+        min-width: 35px;
+        font-size: 0.9rem;
+    }
+    
+    .browse-words-btn {
+        right: 5rem;
+        width: 3.5rem;
+        height: 3.5rem;
+        font-size: 1.5rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .word-cards-grid {
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    }
+    
+    .word-library-header {
+        padding: 1rem;
+    }
+    
+    .alphabet-nav {
+        padding: 0.5rem 1rem;
+    }
+    
+    .word-cards-container {
+        padding: 1rem;
+    }
+    
+    /* 超小屏幕按钮布局优化 */
+    .add-word-btn {
+        bottom: 1.5rem;
+        right: 1.5rem;
+        width: 3rem;
+        height: 3rem;
+        font-size: 1.5rem;
+    }
+    
+    .browse-words-btn {
+        bottom: 1.5rem;
+        right: 5rem;
+        width: 3rem;
+        height: 3rem;
+        font-size: 1.2rem;
     }
 } 

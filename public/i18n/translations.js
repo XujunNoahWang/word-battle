@@ -111,7 +111,14 @@ window.translations = {
             startGame: "开始游戏（需要至少2名玩家）",
             leaveRoom: "离开当前房间",
             addWords: "添加新单词到词库",
+            browseWords: "浏览单词库",
             languageSwitch: "切换语言"
+        },
+        wordLibrary: {
+            title: "单词库",
+            loadingMore: "加载更多...",
+            backToTop: "返回顶部",
+            clickToHear: "点击图片听发音"
         }
     },
     en: {
@@ -225,7 +232,14 @@ window.translations = {
             startGame: "Start game (requires at least 2 players)",
             leaveRoom: "Leave current room",
             addWords: "Add new words to the dictionary",
+            browseWords: "Browse word library",
             languageSwitch: "Switch language"
+        },
+        wordLibrary: {
+            title: "Word Library",
+            loadingMore: "Loading more...",
+            backToTop: "Back to top",
+            clickToHear: "Click image to hear pronunciation"
         }
     }
 };

@@ -65,6 +65,11 @@
                 <span>+</span>
             </button>
             
+            <!-- 浏览单词库按钮 -->
+            <button class="browse-words-btn" id="browseWordsBtn" data-i18n-title="tooltips.browseWords">
+                <span>📚</span>
+            </button>
+            
             <!-- 语言切换按钮 -->
             <button class="language-switcher" id="languageSwitcher" data-i18n-title="tooltips.languageSwitch">
                 <span class="current-lang">中</span>
@@ -143,6 +148,39 @@
                     </div>
                     <div class="word-list" id="wordList"></div>
                 </div>
+            </div>
+        </div>
+
+        <!-- 单词库浏览页面 -->
+        <div class="word-library hidden" id="wordLibrary">
+            <div class="word-library-content">
+                <div class="word-library-header">
+                    <h2 data-i18n="wordLibrary.title">单词库</h2>
+                    <button class="btn btn-secondary" id="closeWordLibrary" data-i18n="common.back">返回</button>
+                </div>
+                
+                <!-- 字母导航 -->
+                <div class="alphabet-nav" id="alphabetNav">
+                    <div class="alphabet-nav-container">
+                        <!-- 字母按钮将通过JavaScript生成 -->
+                    </div>
+                </div>
+                
+                <!-- 单词卡片容器 -->
+                <div class="word-cards-container" id="wordCardsContainer">
+                    <div class="word-cards-grid" id="wordCardsGrid">
+                        <!-- 单词卡片将通过JavaScript生成 -->
+                    </div>
+                    <div class="loading-more hidden" id="loadingMore">
+                        <div class="loading-spinner"></div>
+                        <p>加载更多...</p>
+                    </div>
+                </div>
+                
+                <!-- 返回顶部按钮 -->
+                <button class="back-to-top hidden" id="backToTop">
+                    <span>↑</span>
+                </button>
             </div>
         </div>
     </div>
