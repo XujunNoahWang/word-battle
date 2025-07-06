@@ -701,7 +701,42 @@ class WordBattleClient {
                 item.innerHTML = `<div class="image-error">图片加载失败</div>`;
             };
             
-            item.onclick = (e) => this.selectAnswer(images[index], item);
+            // 移除原来的点击事件，使用触摸开始事件（方案B：Press Down + 短暂延迟）
+            let touchTimer = null;
+            
+            // 处理触摸开始事件
+            const handleTouchStart = (e) => {
+                e.preventDefault(); // 防止页面滚动和其他默认行为
+                
+                // 清除之前的定时器
+                if (touchTimer) {
+                    clearTimeout(touchTimer);
+                }
+                
+                // 100ms延迟后选中，避免误触
+                touchTimer = setTimeout(() => {
+                    this.selectAnswer(images[index], item);
+                }, 100);
+            };
+            
+            // 处理触摸结束和取消事件
+            const handleTouchEnd = (e) => {
+                // 如果手指在延迟期间离开，取消选择
+                if (touchTimer) {
+                    clearTimeout(touchTimer);
+                    touchTimer = null;
+                }
+            };
+            
+            // 添加触摸事件监听器
+            item.addEventListener('touchstart', handleTouchStart, { passive: false });
+            item.addEventListener('touchend', handleTouchEnd);
+            item.addEventListener('touchcancel', handleTouchEnd);
+            
+            // 保持鼠标事件以支持桌面端
+            item.addEventListener('mousedown', handleTouchStart);
+            item.addEventListener('mouseup', handleTouchEnd);
+            item.addEventListener('mouseleave', handleTouchEnd);
         });
     }
 
