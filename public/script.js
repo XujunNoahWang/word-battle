@@ -714,7 +714,7 @@ class WordBattleClient {
             // 移除原来的点击事件，使用触摸开始事件（方案B：Press Down + 短暂延迟）
             let touchTimer = null;
             
-            // 处理触摸开始事件
+            // 处理触摸开始事件（移动端）
             const handleTouchStart = (e) => {
                 e.preventDefault(); // 防止页面滚动和其他默认行为
                 
@@ -723,10 +723,10 @@ class WordBattleClient {
                     clearTimeout(touchTimer);
                 }
                 
-                // 100ms延迟后选中，避免误触
+                // 移动端50ms延迟后选中，避免误触
                 touchTimer = setTimeout(() => {
                     this.selectAnswer(images[index], item);
-                }, 100);
+                }, 50);
             };
             
             // 处理触摸结束和取消事件
@@ -738,15 +738,19 @@ class WordBattleClient {
                 }
             };
             
-            // 添加触摸事件监听器
+            // 处理鼠标点击事件（PC端立即响应）
+            const handleMouseClick = (e) => {
+                e.preventDefault();
+                this.selectAnswer(images[index], item);
+            };
+            
+            // 添加触摸事件监听器（移动端）
             item.addEventListener('touchstart', handleTouchStart, { passive: false });
             item.addEventListener('touchend', handleTouchEnd);
             item.addEventListener('touchcancel', handleTouchEnd);
             
-            // 保持鼠标事件以支持桌面端
-            item.addEventListener('mousedown', handleTouchStart);
-            item.addEventListener('mouseup', handleTouchEnd);
-            item.addEventListener('mouseleave', handleTouchEnd);
+            // 添加鼠标点击事件监听器（PC端）
+            item.addEventListener('click', handleMouseClick);
         });
     }
 
@@ -857,8 +861,9 @@ class WordBattleClient {
                 this.updateProgress(progress);
             }
             
+            // 保持图片放大状态0.5秒，然后进入下一题
             setTimeout(() => {
-                imageElement.classList.remove(feedbackClass);
+                // 不移除feedbackClass，保持放大状态
                 allImages.forEach(item => item.style.pointerEvents = 'auto');
                 
                 this.socket.emit('request_next_question', {

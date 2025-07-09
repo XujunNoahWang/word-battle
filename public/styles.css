@@ -1375,18 +1375,16 @@ body {
 .image-item.correct {
     border-color: #4CAF50;
     transform: scale(1.05);
+    transition: transform 0.2s ease, border-color 0.2s ease;
 }
 
 .image-item.wrong {
     border-color: #f44336;
     transform: scale(1.05);
+    transition: transform 0.2s ease, border-color 0.2s ease;
 }
 
-@keyframes feedback {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.05); }
-    100% { transform: scale(1); }
-}
+/* 移除feedback动画，只保留放大效果 */
 
 .image-grid {
     display: grid;
