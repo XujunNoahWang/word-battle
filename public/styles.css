@@ -1361,6 +1361,29 @@ body {
     transform: scale(0.95);
 }
 
+.replay-button:focus {
+    outline: none;
+    opacity: 1 !important;
+    display: flex !important;
+    visibility: visible !important;
+}
+
+.replay-button,
+.replay-button:hover,
+.replay-button:active,
+.replay-button:focus,
+.replay-button:visited {
+    opacity: 1 !important;
+    display: flex !important;
+    visibility: visible !important;
+    z-index: 10 !important;
+    outline: none !important;
+    color: #fff !important;
+    background: var(--primary-color) !important;
+    font-size: 2rem !important;
+    border: 2px solid #007AFF !important;
+}
+
 .image-item {
     aspect-ratio: 1;
     cursor: pointer;

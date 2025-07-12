@@ -668,18 +668,18 @@ class WordBattleClient {
         
         document.querySelector('.word-display h2').textContent = word;
         
-        const existingButton = document.querySelector('.replay-button');
-        if (existingButton) {
-            existingButton.remove();
+        // 只在题目切换时重建重播按钮
+        let replayButton = document.querySelector('.replay-button');
+        if (!replayButton) {
+            replayButton = document.createElement('button');
+            replayButton.className = 'replay-button';
+            replayButton.innerHTML = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><polygon points="7,5 20,12 7,19" fill="#fff"/></svg>`;
+            document.querySelector('.word-display').appendChild(replayButton);
         }
-        
-        const replayButton = document.createElement('button');
-        replayButton.className = 'replay-button';
-        replayButton.innerHTML = '▶';
+        // 始终只绑定一次点击事件，点击时只播放语音
         replayButton.onclick = async () => {
             await this.speakWord(word);
         };
-        document.querySelector('.word-display').appendChild(replayButton);
         
         const imageGrid = document.querySelector('.image-grid');
         imageGrid.innerHTML = images.map((image, index) => `
