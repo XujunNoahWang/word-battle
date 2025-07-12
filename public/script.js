@@ -1463,6 +1463,24 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 
+// 禁止双指缩放
+if (typeof window !== 'undefined') {
+  document.addEventListener('touchmove', function (event) {
+    if (event.touches.length > 1) {
+      event.preventDefault();
+    }
+  }, { passive: false });
+  // 禁止双击缩放
+  let lastTouchEnd = 0;
+  document.addEventListener('touchend', function (event) {
+    const now = Date.now();
+    if (now - lastTouchEnd <= 300) {
+      event.preventDefault();
+    }
+    lastTouchEnd = now;
+  }, false);
+}
+
 // 全局实例
 let wordBattleClient;
 
