@@ -748,10 +748,8 @@ class WordBattleClient {
                     clearTimeout(touchTimer);
                 }
                 
-                // 移动端50ms延迟后选中，避免误触
-                touchTimer = setTimeout(() => {
-                    this.selectAnswer(images[index], item);
-                }, 50);
+                // 移动端立即选中，与PC端保持一致
+                this.selectAnswer(images[index], item);
             };
             
             // 处理触摸结束和取消事件
