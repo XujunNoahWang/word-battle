@@ -1254,7 +1254,26 @@ body {
     display: flex;
     align-items: stretch;
     justify-content: stretch;
+    border: 4px solid transparent;
+    /* 移除缩放动画 */
+    /* transition: transform 0.2s ease; */
 }
+.image-item:hover,
+.image-item:active {
+    /* 移除悬停和激活时的放大效果 */
+    /* transform: none; */
+}
+.image-item.correct {
+    border-color: #4CAF50;
+    /* 移除放大效果 */
+    /* transform: none; */
+}
+.image-item.wrong {
+    border-color: #f44336;
+    /* 移除放大效果 */
+    /* transform: none; */
+}
+
 .image-bg {
     width: 100%;
     height: 100%;
@@ -1262,12 +1281,15 @@ body {
     background-position: center;
     border-radius: inherit;
     box-shadow: inherit;
-    transition: transform 0.3s ease;
+    /* 移除所有动画效果 */
+    transition: none !important;
+    transform: none !important;
     display: block;
 }
 
 .image-item:hover {
-    transform: scale(1.02);
+    /* 移除悬停时的放大效果 */
+    transform: none !important;
 }
 
 .game-scores {
@@ -1403,7 +1425,8 @@ body {
 .image-item {
     aspect-ratio: 1;
     cursor: pointer;
-    transition: all 0.2s ease;
+    /* 移除所有动画效果 */
+    transition: none !important;
     border-radius: var(--radius-lg);
     overflow: hidden;
     box-shadow: var(--shadow-md);
@@ -1413,14 +1436,16 @@ body {
 
 .image-item.correct {
     border-color: #4CAF50;
-    transform: scale(1.05);
-    transition: transform 0.2s ease, border-color 0.2s ease;
+    /* 移除放大效果，只保留边框颜色 */
+    transform: none !important;
+    transition: none !important;
 }
 
 .image-item.wrong {
     border-color: #f44336;
-    transform: scale(1.05);
-    transition: transform 0.2s ease, border-color 0.2s ease;
+    /* 移除放大效果，只保留边框颜色 */
+    transform: none !important;
+    transition: none !important;
 }
 
 /* 移除feedback动画，只保留放大效果 */
@@ -2094,4 +2119,36 @@ body {
         height: 3rem;
         font-size: 1.2rem;
     }
+}
+
+/* 强制移除所有图片相关的动画效果 */
+.image-item,
+.image-item:hover,
+.image-item:active,
+.image-item:focus,
+.image-item.correct,
+.image-item.wrong,
+.image-bg,
+.image-bg:hover,
+.image-bg:active,
+.image-bg:focus {
+    transform: none !important;
+    transition: none !important;
+    animation: none !important;
+    scale: none !important;
+}
+
+/* 确保图片点击后只有边框反馈，无任何动画 */
+.image-item.correct,
+.image-item.wrong {
+    border-width: 4px !important;
+    border-style: solid !important;
+}
+
+.image-item.correct {
+    border-color: #4CAF50 !important;
+}
+
+.image-item.wrong {
+    border-color: #f44336 !important;
 } 
