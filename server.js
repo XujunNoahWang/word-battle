@@ -70,7 +70,7 @@ app.post('/api/words', async (req, res) => {
     }
 
     const data = JSON.parse(fs.readFileSync(wordlistPath, 'utf8'));
-    const normalizedWord = word.toLowerCase();
+    const normalizedWord = word.trim(); // 保持原始大小写，只去除空格
     
     if (!data.words.includes(normalizedWord)) {
       data.words.push(normalizedWord);
@@ -112,7 +112,7 @@ app.post('/api/words', async (req, res) => {
 
 app.delete('/api/words/:word', (req, res) => {
   try {
-    const wordToDelete = req.params.word.toLowerCase();
+    const wordToDelete = req.params.word; // 保持原始大小写
     const data = JSON.parse(fs.readFileSync(wordlistPath, 'utf8'));
     const index = data.words.indexOf(wordToDelete);
     
