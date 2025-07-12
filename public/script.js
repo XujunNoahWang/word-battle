@@ -632,6 +632,12 @@ class WordBattleClient {
 
     // 显示大厅
     showLobby() {
+        document.body.style.overflow = '';
+        document.body.style.height = '';
+        document.body.style.touchAction = '';
+        document.documentElement.style.overflow = '';
+        document.documentElement.style.height = '';
+        document.documentElement.style.touchAction = '';
         document.getElementById('lobby').classList.remove('hidden');
         document.getElementById('roomView').classList.add('hidden');
         document.getElementById('preloadView').classList.add('hidden');
@@ -640,6 +646,12 @@ class WordBattleClient {
 
     // 显示房间
     showRoom() {
+        document.body.style.overflow = '';
+        document.body.style.height = '';
+        document.body.style.touchAction = '';
+        document.documentElement.style.overflow = '';
+        document.documentElement.style.height = '';
+        document.documentElement.style.touchAction = '';
         document.getElementById('lobby').classList.add('hidden');
         document.getElementById('roomView').classList.remove('hidden');
         document.getElementById('preloadView').classList.add('hidden');
@@ -648,6 +660,12 @@ class WordBattleClient {
 
     // 显示游戏页面
     async showGameView(gameData) {
+        document.body.style.overflow = 'hidden';
+        document.body.style.height = '100vh';
+        document.body.style.touchAction = 'none';
+        document.documentElement.style.overflow = 'hidden';
+        document.documentElement.style.height = '100vh';
+        document.documentElement.style.touchAction = 'none';
         document.getElementById('lobby').classList.add('hidden');
         document.getElementById('roomView').classList.add('hidden');
         document.getElementById('preloadView').classList.add('hidden');
@@ -664,6 +682,12 @@ class WordBattleClient {
 
     // 更新游戏视图
     updateGameView(data) {
+        document.body.style.overflow = 'hidden';
+        document.body.style.height = '100vh';
+        document.body.style.touchAction = 'none';
+        document.documentElement.style.overflow = 'hidden';
+        document.documentElement.style.height = '100vh';
+        document.documentElement.style.touchAction = 'none';
         const { word, images } = data;
         
         document.querySelector('.word-display h2').textContent = word;
@@ -1078,7 +1102,14 @@ class WordBattleClient {
 
     // 显示单词库浏览页面
     async showWordLibrary() {
+        document.body.style.overflow = '';
+        document.body.style.height = '';
+        document.body.style.touchAction = '';
+        document.documentElement.style.overflow = '';
+        document.documentElement.style.height = '';
+        document.documentElement.style.touchAction = '';
         try {
+            document.body.style.overflow = '';
             document.getElementById('lobby').classList.add('hidden');
             document.getElementById('wordLibrary').classList.remove('hidden');
             
@@ -1306,6 +1337,12 @@ class WordBattleClient {
 
     // 显示预加载页面
     showPreloadView(data) {
+        document.body.style.overflow = '';
+        document.body.style.height = '';
+        document.body.style.touchAction = '';
+        document.documentElement.style.overflow = '';
+        document.documentElement.style.height = '';
+        document.documentElement.style.touchAction = '';
         document.getElementById('lobby').classList.add('hidden');
         document.getElementById('roomView').classList.add('hidden');
         document.getElementById('gameView').classList.add('hidden');
