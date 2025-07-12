@@ -708,7 +708,7 @@ class WordBattleClient {
         const imageGrid = document.querySelector('.image-grid');
         imageGrid.innerHTML = images.map((image, index) => `
             <div class="image-item" data-index="${index}">
-                <img src="/data/images/${image}.jpg" alt="选项${index + 1}">
+                <div class="image-bg" style="background-image: url('/data/images/${image}.jpg');"></div>
             </div>
         `).join('');
         
@@ -716,25 +716,26 @@ class WordBattleClient {
         let loadedImages = 0;
         
         imageItems.forEach((item, index) => {
-            const img = item.querySelector('img');
-            
-            img.onload = () => {
-                loadedImages++;
-                if (loadedImages === images.length) {
-                    setTimeout(async () => {
-                        await this.speakWord(word);
-                        if (this.isMobileDevice()) {
-                            console.log('📱 移动端自动播放语音完成:', word);
-                        }
-                    }, 300);
+            const imageBg = item.querySelector('.image-bg');
+            // 兼容原有图片事件
+            imageBg.setAttribute('draggable', 'false');
+            imageBg.setAttribute('oncontextmenu', 'return false');
+            imageBg.addEventListener('contextmenu', e => e.preventDefault());
+            imageBg.addEventListener('touchstart', e => {
+                if (e.touches.length === 1) {
+                    e.preventDefault(); // 阻止长按弹出菜单
                 }
-            };
-            
-            img.onerror = () => {
-                console.error(`Failed to load image: ${image}`);
-                item.innerHTML = `<div class="image-error">图片加载失败</div>`;
-            };
-            
+            }, { passive: false });
+            // 伪造图片加载完成事件（背景图无法直接监听加载）
+            loadedImages++;
+            if (loadedImages === images.length) {
+                setTimeout(async () => {
+                    await this.speakWord(word);
+                    if (this.isMobileDevice()) {
+                        console.log('📱 移动端自动播放语音完成:', word);
+                    }
+                }, 300);
+            }
             // 移除原来的点击事件，使用触摸开始事件（方案B：Press Down + 短暂延迟）
             let touchTimer = null;
             
