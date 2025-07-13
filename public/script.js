@@ -1381,33 +1381,29 @@ class WordBattleClient {
             const preloadPlayers = document.getElementById('preloadPlayers');
             
             preloadPlayers.innerHTML = data.players.map(player => {
-                const statusText = player.completed ? '加载完成' : `${player.progress}%`;
                 const statusClass = player.completed ? 'completed' : '';
-                
                 return `
                     <div class="preload-player ${player.completed ? 'completed' : ''}">
                         <div class="preload-player-header">
                             <span class="preload-player-name">${player.name}</span>
-                            <span class="preload-player-status ${statusClass}">${statusText}</span>
+                            <span class="preload-player-status ${statusClass}">${player.progress}%</span>
                         </div>
                         <div class="preload-progress-bar">
                             <div class="preload-progress-fill ${player.completed ? 'completed' : ''}" 
                                  style="width: ${player.progress}%"></div>
                         </div>
-                        <div class="preload-progress-text">${player.progress}% 完成</div>
+                        <div class="preload-progress-text" id="preloadStepText"></div>
                     </div>
                 `;
             }).join('');
         }
-        
         // 处理图片加载进度更新
         if (data.loadedImages !== undefined && data.totalImages !== undefined) {
-            const preloadImageCount = document.getElementById('preloadImageCount');
             const percent = data.percent || Math.round((data.loadedImages / data.totalImages) * 100);
-            
+            const preloadImageCount = document.getElementById('preloadImageCount');
+            const preloadStepText = document.getElementById('preloadStepText');
             if (preloadImageCount && window.i18n) {
                 let progressText;
-                
                 if (percent < 25) {
                     progressText = window.i18n.t('preload.optimizingImages');
                 } else if (percent < 50) {
@@ -1419,10 +1415,13 @@ class WordBattleClient {
                 } else {
                     progressText = window.i18n.t('preload.completed');
                 }
-                
-                // 添加进度百分比
-                const progressPercent = window.i18n.t('preload.loadingProgress', { percent: percent });
-                preloadImageCount.innerHTML = `${progressText}<br><small>${progressPercent}</small>`;
+                // 进度条下方显示当前阶段
+                if (preloadStepText) {
+                    preloadStepText.textContent = progressText;
+                } else {
+                    // 兼容老结构，直接显示在下方
+                    preloadImageCount.textContent = progressText;
+                }
             }
         }
     }
