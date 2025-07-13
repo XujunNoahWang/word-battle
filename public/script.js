@@ -1392,7 +1392,7 @@ class WordBattleClient {
                             <div class="preload-progress-fill ${player.completed ? 'completed' : ''}" 
                                  style="width: ${player.progress}%"></div>
                         </div>
-                        <div class="preload-progress-text" id="preloadStepText"></div>
+                        <div class="preload-progress-text" id="preloadStepText" style="min-height:1.5em;"></div>
                     </div>
                 `;
             }).join('');
@@ -1414,8 +1414,10 @@ class WordBattleClient {
                 } else {
                     progressText = window.i18n.t('preload.completed');
                 }
-                // 进度条下方始终显示当前阶段
-                preloadStepText.textContent = progressText;
+                // 只有内容变化时才替换文本，否则保持原有内容
+                if (preloadStepText.textContent !== progressText) {
+                    preloadStepText.textContent = progressText;
+                }
             }
         }
     }
