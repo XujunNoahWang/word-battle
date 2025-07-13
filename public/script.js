@@ -313,10 +313,10 @@ class WordBattleClient {
 
         this.socket.on('image_downloaded', (data) => {
             if (data.success) {
-                this.showNotification('图片下载', `单词 "${data.word}" 的图片${data.message}`, 'success');
+                this.showNotification('notifications.imageDownloadTitle', 'notifications.imageDownloadSuccess', 'success', { word: data.word, message: data.message });
                 this.loadWords();
             } else {
-                this.showNotification('图片下载', `单词 "${data.word}" 的图片${data.message}`, 'warning');
+                this.showNotification('notifications.imageDownloadTitle', 'notifications.imageDownloadWarning', 'warning', { word: data.word, message: data.message });
             }
         });
 
@@ -329,7 +329,7 @@ class WordBattleClient {
         });
 
         this.socket.on('game_start_error', (data) => {
-            this.showNotification('无法开始游戏', data.message, 'error');
+            this.showNotification('notifications.gameStartError', 'notifications.gameStartError', 'error');
         });
     }
 
@@ -520,7 +520,7 @@ class WordBattleClient {
     async createRoom() {
         const currentPlayer = this.gameState.players[this.playerId];
         if (currentPlayer && currentPlayer.status === 'in_room') {
-            this.showNotification('创建失败', '您已在房间中，请先退出当前房间', 'warning');
+            this.showNotification('notifications.createRoomFailed', 'notifications.alreadyInRoom', 'warning');
             return;
         }
 
@@ -529,8 +529,8 @@ class WordBattleClient {
             try {
                 await this.activateAudioContext();
                 this.showNotification(
-                    i18n.t('notifications.voiceReadyTitle'),
-                    i18n.t('notifications.voiceReadyMsg'),
+                    'notifications.voiceReadyTitle',
+                    'notifications.voiceReadyMsg',
                     'success'
                 );
             } catch (error) {
@@ -543,8 +543,8 @@ class WordBattleClient {
         });
 
         this.showNotification(
-            i18n.t('lobby.createRoom'),
-            i18n.t('notifications.roomCreated'),
+            'lobby.createRoom',
+            'notifications.roomCreated',
             'success'
         );
     }
@@ -553,19 +553,19 @@ class WordBattleClient {
     async joinRoom(roomId) {
         const currentPlayer = this.gameState.players[this.playerId];
         if (currentPlayer && currentPlayer.status === 'in_room') {
-            this.showNotification('加入失败', '您已在房间中，请先退出当前房间', 'warning');
+            this.showNotification('notifications.joinRoomFailed', 'notifications.alreadyInRoom', 'warning');
             return;
         }
 
         const room = this.gameState.rooms[roomId];
         
         if (!room) {
-            this.showNotification('加入失败', '房间不存在', 'error');
+            this.showNotification('notifications.joinRoomFailed', 'notifications.roomNotExists', 'error');
             return;
         }
 
         if (room.gameStarted) {
-            this.showNotification('加入失败', '游戏已开始，无法加入', 'error');
+            this.showNotification('notifications.joinRoomFailed', 'notifications.gameAlreadyStarted', 'error');
             return;
         }
 
@@ -574,8 +574,8 @@ class WordBattleClient {
             try {
                 await this.activateAudioContext();
                 this.showNotification(
-                    i18n.t('notifications.voiceReadyTitle'),
-                    i18n.t('notifications.voiceReadyMsg'),
+                    'notifications.voiceReadyTitle',
+                    'notifications.voiceReadyMsg',
                     'success'
                 );
             } catch (error) {
@@ -592,7 +592,7 @@ class WordBattleClient {
         this.showRoom();
         
         const hostPlayer = this.gameState.players[room.host];
-        this.showNotification('加入房间', `已加入${hostPlayer.name}的房间`, 'success');
+        this.showNotification('notifications.joinedRoom', 'notifications.joinedRoomSuccess', 'success', { name: hostPlayer.name });
     }
 
     // 处理房间解散事件
@@ -601,9 +601,10 @@ class WordBattleClient {
             this.currentRoom = null;
             this.showLobby();
             this.showNotification(
-                i18n.t('notifications.roomDissolved'),
-                data.message || i18n.t('notifications.roomDissolvedDetail', { roomName: data.roomName }),
-                'warning'
+                'notifications.roomDissolved',
+                data.message || 'notifications.roomDissolvedDetail',
+                'warning',
+                { roomName: data.roomName }
             );
         }
     }
@@ -616,8 +617,8 @@ class WordBattleClient {
         this.currentRoom = null;
         this.showLobby();
         this.showNotification(
-            i18n.t('room.leaveRoom'),
-            i18n.t('notifications.returnToLobby'),
+            'room.leaveRoom',
+            'notifications.returnToLobby',
             'success'
         );
     }
@@ -630,7 +631,7 @@ class WordBattleClient {
             console.log('📱 移动端在用户交互时激活音频上下文...');
             try {
                 await this.activateAudioContext();
-                this.showNotification('🔊 语音功能', '移动端语音功能已激活！每题会自动播放英文发音', 'success');
+                this.showNotification('notifications.voiceActivated', 'notifications.voiceActivatedMsg', 'success');
             } catch (error) {
                 console.warn('音频上下文激活失败:', error);
             }
@@ -952,13 +953,20 @@ class WordBattleClient {
     }
 
     // 显示通知
-    showNotification(title, message, type = 'info') {
+    showNotification(title, message, type = 'info', params = {}) {
         const container = document.getElementById('notificationContainer');
         const notification = document.createElement('div');
         
-        // 支持国际化的标题和消息
-        const translatedTitle = window.i18n ? window.i18n.t(title) : title;
-        const translatedMessage = window.i18n ? window.i18n.t(message) : message;
+        // 支持国际化的标题和消息，支持参数替换
+        let translatedTitle = window.i18n ? window.i18n.t(title) : title;
+        let translatedMessage = window.i18n ? window.i18n.t(message) : message;
+        
+        // 替换参数
+        Object.keys(params).forEach(key => {
+            const placeholder = `{${key}}`;
+            translatedTitle = translatedTitle.replace(placeholder, params[key]);
+            translatedMessage = translatedMessage.replace(placeholder, params[key]);
+        });
         
         notification.className = `notification ${type}`;
         notification.innerHTML = `
@@ -1024,7 +1032,7 @@ class WordBattleClient {
             const words = await response.json();
             await this.displayWords(words);
         } catch (error) {
-            this.showNotification('错误', '加载单词列表失败', 'error');
+            this.showNotification('common.error', 'notifications.loadWordsFailed', 'error');
         }
     }
 
@@ -1034,7 +1042,7 @@ class WordBattleClient {
         const word = input.value.trim();
         
         if (!word) {
-            this.showNotification('提示', '请输入单词', 'warning');
+            this.showNotification('common.warning', 'notifications.enterWordHint', 'warning');
             return;
         }
 
@@ -1052,12 +1060,12 @@ class WordBattleClient {
             if (response.ok) {
                 input.value = '';
                 await this.displayWords(data.words);
-                this.showNotification('成功', data.message, 'success');
+                this.showNotification('common.success', 'notifications.addWordSuccess', 'success');
             } else {
-                this.showNotification('错误', data.error, 'error');
+                this.showNotification('common.error', 'notifications.addWordFailed', 'error');
             }
         } catch (error) {
-            this.showNotification('错误', '添加单词失败', 'error');
+            this.showNotification('common.error', 'notifications.addWordFailed', 'error');
         }
     }
 
@@ -1072,12 +1080,12 @@ class WordBattleClient {
             
             if (response.ok) {
                 await this.displayWords(data.words);
-                this.showNotification('成功', '单词删除成功', 'success');
+                this.showNotification('common.success', 'notifications.deleteWordSuccess', 'success');
             } else {
-                this.showNotification('错误', data.error, 'error');
+                this.showNotification('common.error', 'notifications.deleteWordFailed', 'error');
             }
         } catch (error) {
-            this.showNotification('错误', '删除单词失败', 'error');
+            this.showNotification('common.error', 'notifications.deleteWordFailed', 'error');
         }
     }
 
@@ -1142,7 +1150,7 @@ class WordBattleClient {
             
         } catch (error) {
             console.error('显示单词库失败:', error);
-            this.showNotification('错误', '加载单词库失败', 'error');
+            this.showNotification('common.error', 'notifications.loadWordLibraryFailed', 'error');
         }
     }
 
