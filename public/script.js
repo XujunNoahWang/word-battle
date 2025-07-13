@@ -1400,9 +1400,8 @@ class WordBattleClient {
         // 处理图片加载进度更新
         if (data.loadedImages !== undefined && data.totalImages !== undefined) {
             const percent = data.percent || Math.round((data.loadedImages / data.totalImages) * 100);
-            const preloadImageCount = document.getElementById('preloadImageCount');
             const preloadStepText = document.getElementById('preloadStepText');
-            if (preloadImageCount && window.i18n) {
+            if (preloadStepText && window.i18n) {
                 let progressText;
                 if (percent < 25) {
                     progressText = window.i18n.t('preload.optimizingImages');
@@ -1415,13 +1414,8 @@ class WordBattleClient {
                 } else {
                     progressText = window.i18n.t('preload.completed');
                 }
-                // 进度条下方显示当前阶段
-                if (preloadStepText) {
-                    preloadStepText.textContent = progressText;
-                } else {
-                    // 兼容老结构，直接显示在下方
-                    preloadImageCount.textContent = progressText;
-                }
+                // 进度条下方始终显示当前阶段
+                preloadStepText.textContent = progressText;
             }
         }
     }
