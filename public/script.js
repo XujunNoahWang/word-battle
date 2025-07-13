@@ -1379,7 +1379,6 @@ class WordBattleClient {
         // 处理玩家进度更新
         if (data.players) {
             const preloadPlayers = document.getElementById('preloadPlayers');
-            
             preloadPlayers.innerHTML = data.players.map(player => {
                 const statusClass = player.completed ? 'completed' : '';
                 return `
@@ -1392,7 +1391,6 @@ class WordBattleClient {
                             <div class="preload-progress-fill ${player.completed ? 'completed' : ''}" 
                                  style="width: ${player.progress}%"></div>
                         </div>
-                        <div class="preload-progress-text" id="preloadStepText" style="min-height:1.5em;"></div>
                     </div>
                 `;
             }).join('');
@@ -1414,7 +1412,6 @@ class WordBattleClient {
                 } else {
                     progressText = window.i18n.t('preload.completed');
                 }
-                // 只有内容变化时才替换文本，否则保持原有内容
                 if (preloadStepText.textContent !== progressText) {
                     preloadStepText.textContent = progressText;
                 }
