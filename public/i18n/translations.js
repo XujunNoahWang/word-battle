@@ -44,7 +44,12 @@ window.translations = {
             subtitle: "请等待所有玩家完成加载...",
             loadingImages: "正在加载图片...",
             completed: "加载完成",
-            progress: "{loaded}/{total}"
+            progress: "{loaded}/{total}",
+            optimizingImages: "正在优化图片格式...",
+            preloadingGame: "正在预加载游戏资源...",
+            preparingAssets: "正在准备游戏素材...",
+            almostReady: "即将完成...",
+            loadingProgress: "加载进度：{percent}%"
         },
         game: {
             selectImage: "请选择与单词对应的图片",
@@ -165,7 +170,12 @@ window.translations = {
             subtitle: "Please wait for all players to complete loading...",
             loadingImages: "Loading images...",
             completed: "Completed",
-            progress: "{loaded}/{total}"
+            progress: "{loaded}/{total}",
+            optimizingImages: "Optimizing image formats...",
+            preloadingGame: "Preloading game resources...",
+            preparingAssets: "Preparing game assets...",
+            almostReady: "Almost ready...",
+            loadingProgress: "Loading progress: {percent}%"
         },
         game: {
             selectImage: "Select the image that matches the word",

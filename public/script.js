@@ -10,6 +10,10 @@ class WordBattleClient {
         };
         this.audioContextActivated = false; // 跟踪移动端音频上下文状态
         
+        // 初始化图片优化器
+        this.imageOptimizer = new ImageOptimizer();
+        this.preloadProgress = { loaded: 0, total: 0, percent: 0 };
+        
         // 移动端设备检测和初始化日志
         if (this.isMobileDevice()) {
             console.log('📱 检测到移动设备，将在游戏开始时激活语音功能');
@@ -708,7 +712,7 @@ class WordBattleClient {
         const imageGrid = document.querySelector('.image-grid');
         imageGrid.innerHTML = images.map((image, index) => `
             <div class="image-item" data-index="${index}">
-                <div class="image-bg" style="background-image: url('/data/images/${image.toLowerCase()}.jpg');"></div>
+                <div class="image-bg" data-word="${image}" style="background-image: url('/data/images/${image.toLowerCase()}.webp');"></div>
             </div>
         `).join('');
         
@@ -1010,7 +1014,7 @@ class WordBattleClient {
         try {
             const response = await fetch('/api/words');
             const words = await response.json();
-            this.displayWords(words);
+            await this.displayWords(words);
         } catch (error) {
             this.showNotification('错误', '加载单词列表失败', 'error');
         }
@@ -1039,7 +1043,7 @@ class WordBattleClient {
             
             if (response.ok) {
                 input.value = '';
-                this.displayWords(data.words);
+                await this.displayWords(data.words);
                 this.showNotification('成功', data.message, 'success');
             } else {
                 this.showNotification('错误', data.error, 'error');
@@ -1059,7 +1063,7 @@ class WordBattleClient {
             const data = await response.json();
             
             if (response.ok) {
-                this.displayWords(data.words);
+                await this.displayWords(data.words);
                 this.showNotification('成功', '单词删除成功', 'success');
             } else {
                 this.showNotification('错误', data.error, 'error');
@@ -1070,24 +1074,30 @@ class WordBattleClient {
     }
 
     // 显示单词列表
-    displayWords(words) {
+    async displayWords(words) {
         const wordList = document.getElementById('wordList');
-        wordList.innerHTML = words.map(word => `
-            <div class="word-item">
-                <div class="word-content">
-                    <div class="word-image-container">
-                        <img src="/data/images/${word.toLowerCase()}.jpg" 
-                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" 
-                             alt="${word}"
-                             class="word-image" />
-                        <div class="word-image-placeholder">⌛️</div>
-                    </div>
-                    <span>${word}</span>
-                </div>
-                <button onclick="wordBattleClient.deleteWord('${word}')">×</button>
-            </div>
-        `).join('');
         
+        // 使用图片优化器获取URL
+        const wordItems = await Promise.all(words.map(async word => {
+            const imageUrl = await this.imageOptimizer.getImageUrl(word);
+            return `
+                <div class="word-item">
+                    <div class="word-content">
+                        <div class="word-image-container">
+                            <img src="${imageUrl}" 
+                                 onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" 
+                                 alt="${word}"
+                                 class="word-image" />
+                            <div class="word-image-placeholder">⌛️</div>
+                        </div>
+                        <span>${word}</span>
+                    </div>
+                    <button onclick="wordBattleClient.deleteWord('${word}')">×</button>
+                </div>
+            `;
+        }));
+        
+        wordList.innerHTML = wordItems.join('');
         this.updateWordCount(words.length);
     }
 
@@ -1118,7 +1128,7 @@ class WordBattleClient {
             }
             
             this.setupAlphabetNavigation();
-            this.renderWordCards();
+            await this.renderWordCards();
             this.setupInfiniteScroll();
             this.setupBackToTop();
             
@@ -1197,13 +1207,13 @@ class WordBattleClient {
     }
 
     // 渲染单词卡片
-    renderWordCards() {
+    async renderWordCards() {
         const container = document.getElementById('wordCardsGrid');
         container.innerHTML = '';
         
         const alphabet = 'abcdefghijklmnopqrstuvwxyz'.split('');
         
-        alphabet.forEach(letter => {
+        for (const letter of alphabet) {
             const words = this.wordLibraryData[letter];
             if (words && words.length > 0) {
                 // 添加字母分组标题
@@ -1213,22 +1223,26 @@ class WordBattleClient {
                 sectionTitle.innerHTML = `<h3>${letter.toUpperCase()}</h3>`;
                 container.appendChild(sectionTitle);
                 
-                // 添加该字母的单词卡片
-                words.forEach(word => {
-                    const card = this.createWordCard(word);
+                // 批量创建该字母的单词卡片
+                const cardPromises = words.map(word => this.createWordCard(word));
+                const cards = await Promise.all(cardPromises);
+                
+                cards.forEach(card => {
                     container.appendChild(card);
                 });
             }
-        });
+        }
     }
 
     // 创建单词卡片
-    createWordCard(word) {
+    async createWordCard(word) {
         const card = document.createElement('div');
         card.className = 'word-card';
+        
+        const imageUrl = await this.imageOptimizer.getImageUrl(word);
         card.innerHTML = `
             <img class="word-card-image" 
-                 src="/data/images/${word.toLowerCase()}.jpg" 
+                 src="${imageUrl}" 
                  alt="${word}"
                  onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
             <div class="word-card-placeholder" style="display: none;">⌛️</div>
@@ -1349,8 +1363,11 @@ class WordBattleClient {
         const preloadView = document.getElementById('preloadView');
         preloadView.classList.remove('hidden');
         
-        document.getElementById('preloadImageCount').textContent = 
-            `正在加载 ${data.totalImages} 张图片...`;
+        // 使用国际化文本
+        const preloadImageCount = document.getElementById('preloadImageCount');
+        if (preloadImageCount && window.i18n) {
+            preloadImageCount.textContent = window.i18n.t('preload.optimizingImages');
+        }
         
         this.updatePreloadProgress({ players: data.players });
         
@@ -1359,74 +1376,88 @@ class WordBattleClient {
 
     // 更新预加载进度
     updatePreloadProgress(data) {
-        const preloadPlayers = document.getElementById('preloadPlayers');
-        
-        preloadPlayers.innerHTML = data.players.map(player => {
-            const statusText = player.completed ? '加载完成' : `${player.progress}%`;
-            const statusClass = player.completed ? 'completed' : '';
+        // 处理玩家进度更新
+        if (data.players) {
+            const preloadPlayers = document.getElementById('preloadPlayers');
             
-            return `
-                <div class="preload-player ${player.completed ? 'completed' : ''}">
-                    <div class="preload-player-header">
-                        <span class="preload-player-name">${player.name}</span>
-                        <span class="preload-player-status ${statusClass}">${statusText}</span>
+            preloadPlayers.innerHTML = data.players.map(player => {
+                const statusText = player.completed ? '加载完成' : `${player.progress}%`;
+                const statusClass = player.completed ? 'completed' : '';
+                
+                return `
+                    <div class="preload-player ${player.completed ? 'completed' : ''}">
+                        <div class="preload-player-header">
+                            <span class="preload-player-name">${player.name}</span>
+                            <span class="preload-player-status ${statusClass}">${statusText}</span>
+                        </div>
+                        <div class="preload-progress-bar">
+                            <div class="preload-progress-fill ${player.completed ? 'completed' : ''}" 
+                                 style="width: ${player.progress}%"></div>
+                        </div>
+                        <div class="preload-progress-text">${player.progress}% 完成</div>
                     </div>
-                    <div class="preload-progress-bar">
-                        <div class="preload-progress-fill ${player.completed ? 'completed' : ''}" 
-                             style="width: ${player.progress}%"></div>
-                    </div>
-                    <div class="preload-progress-text">${player.progress}% 完成</div>
-                </div>
-            `;
-        }).join('');
+                `;
+            }).join('');
+        }
+        
+        // 处理图片加载进度更新
+        if (data.loadedImages !== undefined && data.totalImages !== undefined) {
+            const preloadImageCount = document.getElementById('preloadImageCount');
+            const percent = data.percent || Math.round((data.loadedImages / data.totalImages) * 100);
+            
+            if (preloadImageCount && window.i18n) {
+                let progressText;
+                
+                if (percent < 25) {
+                    progressText = window.i18n.t('preload.optimizingImages');
+                } else if (percent < 50) {
+                    progressText = window.i18n.t('preload.preloadingGame');
+                } else if (percent < 75) {
+                    progressText = window.i18n.t('preload.preparingAssets');
+                } else if (percent < 100) {
+                    progressText = window.i18n.t('preload.almostReady');
+                } else {
+                    progressText = window.i18n.t('preload.completed');
+                }
+                
+                // 添加进度百分比
+                const progressPercent = window.i18n.t('preload.loadingProgress', { percent: percent });
+                preloadImageCount.innerHTML = `${progressText}<br><small>${progressPercent}</small>`;
+            }
+        }
     }
 
     // 开始图片预加载
     async startImagePreload(images) {
-        let loadedCount = 0;
-        const totalImages = images.length;
-        const imageCache = [];
-
-        const loadPromises = images.map((imageName, index) => {
-            return new Promise((resolve) => {
-                const img = new Image();
-                img.onload = () => {
-                    loadedCount++;
-                    imageCache.push(img);
-                    
-                    this.socket.emit('preload_progress', {
-                        playerId: this.playerId,
-                        roomId: this.currentRoom,
-                        loadedImages: loadedCount,
-                        totalImages: totalImages
-                    });
-                    
-                    resolve();
-                };
-                img.onerror = () => {
-                    console.warn(`图片加载失败: ${imageName}`);
-                    loadedCount++;
-                    
-                    this.socket.emit('preload_progress', {
-                        playerId: this.playerId,
-                        roomId: this.currentRoom,
-                        loadedImages: loadedCount,
-                        totalImages: totalImages
-                    });
-                    
-                    resolve();
-                };
-                img.src = `/data/images/${imageName}.jpg`;
-            });
-        });
-
+        console.log('🚀 开始优化图片预加载...');
+        
         try {
-            await Promise.all(loadPromises);
-            console.log(`预加载完成: ${loadedCount}/${totalImages} 张图片`);
+            // 使用图片优化器进行预加载
+            const results = await this.imageOptimizer.preloadImages(images, (loaded, total, percent) => {
+                this.preloadProgress = { loaded, total, percent };
+                
+                // 发送进度到服务器
+                this.socket.emit('preload_progress', {
+                    playerId: this.playerId,
+                    roomId: this.currentRoom,
+                    loadedImages: loaded,
+                    totalImages: total,
+                    percent: percent
+                });
+                
+                // 更新UI显示
+                this.updatePreloadProgress({ loadedImages: loaded, totalImages: total, percent: percent });
+            });
             
-            this.imageCache = imageCache;
+            const successCount = results.filter(r => r.success).length;
+            console.log(`✅ 预加载完成: ${successCount}/${images.length} 张图片`);
+            
+            // 缓存统计
+            const stats = this.imageOptimizer.getCacheStats();
+            console.log(`📊 缓存统计: ${stats.size} 张图片, 内存使用: ${(stats.memoryUsage / 1024 / 1024).toFixed(2)}MB`);
+            
         } catch (error) {
-            console.error('预加载过程中出现错误:', error);
+            console.error('❌ 预加载过程中出现错误:', error);
         }
     }
 
