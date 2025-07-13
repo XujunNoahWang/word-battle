@@ -708,7 +708,7 @@ class WordBattleClient {
         const imageGrid = document.querySelector('.image-grid');
         imageGrid.innerHTML = images.map((image, index) => `
             <div class="image-item" data-index="${index}">
-                <div class="image-bg" style="background-image: url('/data/images/${image}.jpg');"></div>
+                <div class="image-bg" style="background-image: url('/data/images/${image.toLowerCase()}.jpg');"></div>
             </div>
         `).join('');
         
@@ -1076,7 +1076,7 @@ class WordBattleClient {
             <div class="word-item">
                 <div class="word-content">
                     <div class="word-image-container">
-                        <img src="/data/images/${word}.jpg" 
+                        <img src="/data/images/${word.toLowerCase()}.jpg" 
                              onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" 
                              alt="${word}"
                              class="word-image" />
@@ -1228,7 +1228,7 @@ class WordBattleClient {
         card.className = 'word-card';
         card.innerHTML = `
             <img class="word-card-image" 
-                 src="/data/images/${word}.jpg" 
+                 src="/data/images/${word.toLowerCase()}.jpg" 
                  alt="${word}"
                  onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
             <div class="word-card-placeholder" style="display: none;">⌛️</div>
