@@ -107,7 +107,9 @@ window.translations = {
             gameStarted: "游戏开始！",
             connectionLost: "连接断开，正在重连...",
             reconnected: "重连成功！",
-            returnToLobby: "已返回游戏大厅"
+            returnToLobby: "已返回游戏大厅",
+            voiceReadyTitle: "语音准备",
+            voiceReadyMsg: "移动端语音功能已准备就绪！"
         },
         tooltips: {
             clickToEdit: "点击编辑用户名",
@@ -233,7 +235,9 @@ window.translations = {
             gameStarted: "Game started!",
             connectionLost: "Connection lost, reconnecting...",
             reconnected: "Reconnected successfully!",
-            returnToLobby: "Returned to lobby"
+            returnToLobby: "Returned to lobby",
+            voiceReadyTitle: "Voice Ready",
+            voiceReadyMsg: "Mobile voice feature is ready!"
         },
         tooltips: {
             clickToEdit: "Click to edit username",

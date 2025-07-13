@@ -528,7 +528,11 @@ class WordBattleClient {
             console.log('📱 移动端在创建房间时激活音频上下文...');
             try {
                 await this.activateAudioContext();
-                this.showNotification('🔊 语音准备', '移动端语音功能已准备就绪！', 'success');
+                this.showNotification(
+                    i18n.t('notifications.voiceReadyTitle'),
+                    i18n.t('notifications.voiceReadyMsg'),
+                    'success'
+                );
             } catch (error) {
                 console.warn('音频上下文激活失败:', error);
             }
@@ -569,7 +573,11 @@ class WordBattleClient {
             console.log('📱 移动端在加入房间时激活音频上下文...');
             try {
                 await this.activateAudioContext();
-                this.showNotification('🔊 语音准备', '移动端语音功能已准备就绪！', 'success');
+                this.showNotification(
+                    i18n.t('notifications.voiceReadyTitle'),
+                    i18n.t('notifications.voiceReadyMsg'),
+                    'success'
+                );
             } catch (error) {
                 console.warn('音频上下文激活失败:', error);
             }
