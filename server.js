@@ -148,7 +148,13 @@ const io = socketIo(server, {
   cors: {
     origin: "*",
     methods: ["GET", "POST"]
-  }
+  },
+  transports: ['polling', 'websocket'],
+  pingTimeout: 60000,
+  pingInterval: 25000,
+  allowEIO3: true,
+  maxHttpBufferSize: 1e8,
+  connectTimeout: 45000
 });
 
 // 单词列表缓存

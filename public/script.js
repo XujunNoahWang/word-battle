@@ -226,7 +226,16 @@ class WordBattleClient {
 
     // 连接到服务器
     connectToServer() {
-        this.socket = io();
+        this.socket = io({
+            transports: ['polling', 'websocket'],
+            timeout: 45000,
+            forceNew: false,
+            reconnection: true,
+            reconnectionAttempts: 10,
+            reconnectionDelay: 1000,
+            reconnectionDelayMax: 5000,
+            maxReconnectionAttempts: 10
+        });
 
         this.socket.on('connect', () => {
             console.log('已连接到服务器');
@@ -302,7 +311,20 @@ class WordBattleClient {
 
         this.socket.on('disconnect', (reason) => {
             console.log('连接断开:', reason);
-            this.showNotification('notifications.connectionLost', 'notifications.connectionLost', 'warning');
+            if (reason === 'io server disconnect') {
+                // 服务器主动断开，尝试重新连接
+                this.socket.connect();
+            }
+            // 不要每次都显示通知，避免频繁弹窗
+        });
+
+        this.socket.on('reconnect_attempt', (attemptNumber) => {
+            console.log('尝试重新连接:', attemptNumber);
+        });
+
+        this.socket.on('reconnect_failed', () => {
+            console.error('重新连接失败');
+            this.showNotification('notifications.connectionLost', 'notifications.connectionLost', 'error');
         });
 
         this.socket.on('reconnect', () => {
@@ -1062,7 +1084,9 @@ class WordBattleClient {
                 await this.displayWords(data.words);
                 this.showNotification('common.success', 'notifications.addWordSuccess', 'success');
             } else {
-                this.showNotification('common.error', 'notifications.addWordFailed', 'error');
+                // 显示具体的错误信息
+                const errorMessage = data.error || 'notifications.addWordFailed';
+                this.showNotification('common.error', errorMessage, 'error');
             }
         } catch (error) {
             this.showNotification('common.error', 'notifications.addWordFailed', 'error');
